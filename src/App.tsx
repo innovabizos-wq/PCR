@@ -230,9 +230,13 @@ function App() {
     const qty = material.quantity ?? 0;
     const unit = material.unitPrice ?? 0;
     const iva = material.iva ?? 0;
-    const discount = Math.max(0, (material as any).discount ?? 0);
+    const discount = Math.max(0, material.discount ?? 0);
     return Math.max(0, qty * unit * (1 + iva) - discount);
   };
+
+  const resolvedSheetType = isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'alveolar';
+  const resolvedSheetThickness = isPoly ? thickness : 'n/a';
+  const resolvedSheetColor = isPoly ? polyColor : isPvc ? pvcColor : isWpc ? wpcTone : zacateHeight;
 
   const editedTotal = useMemo(() => {
     if (!displayMaterials.length) return result?.total ?? 0;
@@ -240,17 +244,19 @@ function App() {
   }, [displayMaterials, result]);
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
+  const previewAspect = Math.max(0.45, Math.min(1.9, height / Math.max(width, 0.01)));
+  const previewHeight = Math.round(Math.max(280, Math.min(560, visualizerWidth * previewAspect * 0.56 + 150)));
   const visualizerFrame = useMemo(() => {
-    const maxW = visualizerWidth - 80;
-    const maxH = 320 - 32;
+    const maxW = visualizerWidth - 110;
+    const maxH = previewHeight - 90;
     const safeW = Math.max(width, 1);
     const safeH = Math.max(height, 1);
     const scale = Math.min(maxW / safeW, maxH / safeH);
     return {
-      widthPx: Math.max(40, Math.round(safeW * scale * 0.82)),
-      heightPx: Math.max(40, Math.round(safeH * scale * 0.82))
+      widthPx: Math.max(60, Math.round(safeW * scale * 0.92)),
+      heightPx: Math.max(60, Math.round(safeH * scale * 0.92))
     };
-  }, [height, visualizerWidth, width]);
+  }, [height, previewHeight, visualizerWidth, width]);
 
   // Uniones visibles cada 2.10m (escala real)
   const polySeamPositions = useMemo(() => {
@@ -678,71 +684,156 @@ function App() {
                 </div>
               </div>
 
-              <div ref={customVisualizerRef} className="rounded-xl border border-slate-800 p-3" style={{ backgroundImage: surfaceTexture }}>
+              <div
+                ref={customVisualizerRef}
+                className="rounded-2xl border border-slate-800/80 p-4 shadow-[0_20px_50px_rgba(2,6,23,0.35)]"
+                style={{ backgroundImage: surfaceTexture }}
+              >
+                {result && (
+                  <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-cyan-900/40 bg-slate-900/35 p-2 text-[11px] text-cyan-100 md:grid-cols-4">
+                    <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Ancho real</p>
+                      <p className="text-sm font-bold text-white">{width.toFixed(2)} m</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Alto real</p>
+                      <p className="text-sm font-bold text-white">{height.toFixed(2)} m</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Área</p>
+                      <p className="text-sm font-bold text-white">{(width * height).toFixed(2)} m²</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
+                      <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Piezas</p>
+                      <p className="text-sm font-bold text-white">{result.numSheets}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div
-                  className="relative mx-auto h-80 w-full max-w-[920px] overflow-hidden rounded-lg border border-cyan-900/40"
-                  style={{ backgroundImage: surfaceTexture, backgroundSize: '16px 16px, auto' }}
+                  className="relative mx-auto w-full max-w-[920px] overflow-hidden rounded-xl border border-cyan-900/50"
+                  style={{ height: previewHeight }}
                 >
-                  {result ? (
-                    <>
+                  <div
+                    aria-hidden
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage:
+                        'linear-gradient(to right, rgba(186,230,253,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(186,230,253,0.08) 1px, transparent 1px)',
+                      backgroundSize: '32px 32px'
+                    }}
+                  />
+
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute left-[56px] right-[56px] top-[44px] border-t border-cyan-100/80"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-[34px] left-[56px] right-[56px] border-t border-dashed border-cyan-100/40"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-[34px] left-[56px] top-[44px] border-l border-cyan-100/80"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-[34px] right-[56px] top-[44px] border-l border-dashed border-cyan-100/40"
+                  />
+
+                  <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-semibold text-cyan-100">
+                    Ancho · {width.toFixed(2)} m
+                  </div>
+                  <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/60 px-3 py-1 text-[11px] font-medium text-cyan-200/90">
+                    Escala adaptada al render real ({visualizerFrame.widthPx}px × {visualizerFrame.heightPx}px)
+                  </div>
+                  <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-semibold text-cyan-100">
+                    Alto · {height.toFixed(2)} m
+                  </div>
+
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute left-[56px] top-[44px] h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-100"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute right-[56px] top-[44px] h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-100"
+                  />
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-[34px] left-[56px] h-2 w-2 -translate-x-1/2 translate-y-1/2 rounded-full bg-cyan-100"
+                  />
+
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute right-[56px] top-[44px] text-[11px] text-cyan-100/90"
+                  >
+                    Cota superior
+                  </div>
+
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute bottom-[34px] right-[56px] text-[11px] text-cyan-100/70"
+                  >
+                    Línea base
+                  </div>
+
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute left-[56px] top-[44px] text-[11px] text-cyan-100/90"
+                  >
+                    Cota vertical
+                  </div>
+
+                  <div
+                    className="absolute left-1/2 top-1/2"
+                    style={{
+                      width: visualizerFrame.widthPx,
+                      height: visualizerFrame.heightPx,
+                      transform: 'translate(-50%, -50%)'
+                    }}
+                  >
+                    {result ? (
                       <div
-                        className="absolute left-1/2 top-1/2"
+                        className="relative h-full w-full rounded-lg border border-white/20 shadow-2xl"
                         style={{
-                          width: visualizerFrame.widthPx,
-                          height: visualizerFrame.heightPx,
-                          transform: 'translate(-50%, -50%)'
+                          backgroundImage: activeTexture,
+                          backgroundSize: isPoly || isZacate ? 'cover' : 'auto',
+                          backgroundPosition: 'center'
                         }}
                       >
-                        <div
-                          className="relative h-full w-full rounded-lg border border-white/20 shadow-2xl"
-                          style={{
-                            backgroundImage: activeTexture,
-                            backgroundSize: isPoly || isZacate ? 'cover' : 'auto',
-                            backgroundPosition: 'center'
-                          }}
-                        >
-                          {isPvc && (
-                            <div
-                              className="grid h-full w-full"
-                              style={{
-                                gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(width / 0.4))}, minmax(0,1fr))`,
-                                gridTemplateRows: `repeat(${Math.max(1, Math.ceil(height / 0.4))}, minmax(0,1fr))`
-                              }}
-                            >
-                              {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map((_, i) => (
-                                <div key={i} className="border border-white/20" />
-                              ))}
-                            </div>
-                          )}
-
-                          {isPoly &&
-                            polySeamPositions.map((leftPct) => (
-                              <div
-                                key={leftPct}
-                                className="absolute top-0 h-full w-[6px] border-x-2 border-white/90 bg-white/45 shadow-[0_0_10px_rgba(255,255,255,0.65)]"
-                                style={{ left: `${leftPct}%` }}
-                              />
+                        {isPvc && (
+                          <div
+                            className="grid h-full w-full"
+                            style={{
+                              gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(width / 0.4))}, minmax(0,1fr))`,
+                              gridTemplateRows: `repeat(${Math.max(1, Math.ceil(height / 0.4))}, minmax(0,1fr))`
+                            }}
+                          >
+                            {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map((_, i) => (
+                              <div key={i} className="border border-white/20" />
                             ))}
-                        </div>
-                      </div>
+                          </div>
+                        )}
 
-                      <div className="pointer-events-none absolute left-1/2 top-6 h-5 w-[58%] -translate-x-1/2 border-x border-t border-white/70" />
-                      <div className="pointer-events-none absolute left-1/2 top-1 -translate-x-1/2 text-xs font-semibold text-white">
-                        {width.toFixed(2)} m
+                        {isPoly &&
+                          polySeamPositions.map((leftPct) => (
+                            <div
+                              key={leftPct}
+                              className="absolute top-0 h-full w-[6px] border-x-2 border-white/90 bg-white/45 shadow-[0_0_10px_rgba(255,255,255,0.65)]"
+                              style={{ left: `${leftPct}%` }}
+                            />
+                          ))}
                       </div>
-
-                      <div className="pointer-events-none absolute left-6 top-1/2 h-[58%] w-5 -translate-y-1/2 border-y border-l border-white/70" />
-                      <div className="pointer-events-none absolute left-1 top-1/2 -translate-y-1/2 -rotate-90 text-xs font-semibold text-white">
-                        {height.toFixed(2)} m
+                    ) : null}
+                  </div>
+                  {result ? (
+                    isPoly && (
+                      <div className="pointer-events-none absolute right-5 top-1/2 flex -translate-y-1/2 flex-col items-center rounded-lg bg-slate-950/70 px-2 py-1 text-cyan-100">
+                        <span className="text-[11px] font-bold">Caída de agua</span>
+                        <span className="text-lg leading-none">↓</span>
                       </div>
-
-                      {isPoly && (
-                        <div className="pointer-events-none absolute right-6 top-1/2 flex -translate-y-1/2 flex-col items-center text-white">
-                          <span className="text-[11px] font-bold">Caída de agua</span>
-                          <span className="text-lg leading-none">↓</span>
-                        </div>
-                      )}
-                    </>
+                    )
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-center text-cyan-100/80">
                       <div>
@@ -844,6 +935,9 @@ function App() {
       {showSaveModal && result && (
         <SaveQuoteModal
           result={result}
+          sheetType={resolvedSheetType}
+          sheetThickness={resolvedSheetThickness}
+          sheetColor={resolvedSheetColor}
           onClose={() => setShowSaveModal(false)}
           onSave={() => {
             setShowSaveModal(false);
