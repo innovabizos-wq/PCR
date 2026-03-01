@@ -6,11 +6,21 @@ import { generateQuoteNumber } from '../utils/calculations';
 
 interface SaveQuoteModalProps {
   result: CalculationResult;
+  sheetType: string;
+  sheetThickness: string;
+  sheetColor: string;
   onClose: () => void;
   onSave: () => void;
 }
 
-export default function SaveQuoteModal({ result, onClose, onSave }: SaveQuoteModalProps) {
+export default function SaveQuoteModal({
+  result,
+  sheetType,
+  sheetThickness,
+  sheetColor,
+  onClose,
+  onSave
+}: SaveQuoteModalProps) {
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [notes, setNotes] = useState('');
@@ -27,6 +37,10 @@ export default function SaveQuoteModal({ result, onClose, onSave }: SaveQuoteMod
     setError('');
 
     try {
+      if (!supabase) {
+        throw new Error('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
+      }
+
       const quoteNumber = generateQuoteNumber();
       const { data: authData, error: authError } = await supabase.auth.getUser();
 
@@ -44,9 +58,9 @@ export default function SaveQuoteModal({ result, onClose, onSave }: SaveQuoteMod
         client_email: clientEmail,
         width: result.width,
         height: result.height,
-        sheet_type: 'alveolar',
-        sheet_thickness: '8mm',
-        sheet_color: 'bronze',
+        sheet_type: sheetType,
+        sheet_thickness: sheetThickness,
+        sheet_color: sheetColor,
         num_sheets: result.numSheets,
         materials: result.materials,
         subtotal: result.subtotal,

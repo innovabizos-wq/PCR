@@ -230,9 +230,13 @@ function App() {
     const qty = material.quantity ?? 0;
     const unit = material.unitPrice ?? 0;
     const iva = material.iva ?? 0;
-    const discount = Math.max(0, (material as any).discount ?? 0);
+    const discount = Math.max(0, material.discount ?? 0);
     return Math.max(0, qty * unit * (1 + iva) - discount);
   };
+
+  const resolvedSheetType = isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'alveolar';
+  const resolvedSheetThickness = isPoly ? thickness : 'n/a';
+  const resolvedSheetColor = isPoly ? polyColor : isPvc ? pvcColor : isWpc ? wpcTone : zacateHeight;
 
   const editedTotal = useMemo(() => {
     if (!displayMaterials.length) return result?.total ?? 0;
@@ -844,6 +848,9 @@ function App() {
       {showSaveModal && result && (
         <SaveQuoteModal
           result={result}
+          sheetType={resolvedSheetType}
+          sheetThickness={resolvedSheetThickness}
+          sheetColor={resolvedSheetColor}
           onClose={() => setShowSaveModal(false)}
           onSave={() => {
             setShowSaveModal(false);
