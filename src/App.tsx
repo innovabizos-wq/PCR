@@ -124,7 +124,7 @@ function App() {
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>('activo');
 
   const centerInnerRef = useRef<HTMLDivElement | null>(null);
-  const customVisualizerRef = useRef<HTMLDivElement | null>(null);
+  const customVisualizerRef = useRef<HTMLElement | null>(null);
   const [centerInnerWidth, setCenterInnerWidth] = useState(1100);
 
   const width = parseMetric(widthInput);
@@ -248,6 +248,7 @@ function App() {
   const resolvedSheetType = isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'alveolar';
   const resolvedSheetThickness = isPoly ? thickness : 'n/a';
   const resolvedSheetColor = isPoly ? polyColor : isPvc ? pvcColor : isWpc ? wpcTone : zacateHeight;
+
   const logoUrl = toAssetUrl('logo.png');
 
   const editedTotal = useMemo(() => {
@@ -406,7 +407,7 @@ function App() {
         radial-gradient(circle at 20% 30%, rgba(124,180,72,0.26), transparent 34%),
         radial-gradient(circle at 75% 55%, rgba(92,142,56,0.24), transparent 38%),
         linear-gradient(155deg, rgba(16,56,22,0.58), rgba(56,110,42,0.36)),
-        url('/textures/zacate-grass.svg')`
+        url('${toAssetUrl('textures/zacate-grass.svg')}')`
       : isWpc
         ? `linear-gradient(160deg, ${wpcTone === 'nogal' ? '#6b4423' : wpcTone === 'grafito' ? '#4b5563' : '#b67946'}, #2f2418)`
         : `url(${POLY_TEXTURES[polyColor]})`;
@@ -514,7 +515,7 @@ function App() {
           </header>
 
           <div className="space-y-4 px-6 py-6">
-            <section ref={customVisualizerRef} className="rounded-xl border border-gray-200 bg-white px-6 py-4">
+            <section className="rounded-xl border border-gray-200 bg-white px-6 py-4">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-gray-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00011a] text-xs font-bold text-white">
                   1
@@ -684,7 +685,7 @@ function App() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-gray-200 bg-white px-6 py-4">
+            <section ref={customVisualizerRef} className="rounded-xl border border-gray-200 bg-white px-6 py-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold uppercase text-gray-700">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00011a] text-xs font-bold text-white">
@@ -811,20 +812,6 @@ function App() {
                           />
                         )}
 
-                        {isPvc && (
-                          <div
-                            className="grid h-full w-full"
-                            style={{
-                              gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(width / 0.4))}, minmax(0,1fr))`,
-                              gridTemplateRows: `repeat(${Math.max(1, Math.ceil(height / 0.4))}, minmax(0,1fr))`
-                            }}
-                          >
-                            {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map((_, i) => (
-                              <div key={i} className="border border-white/20" />
-                            ))}
-                          </div>
-                        )}
-
                         {isPoly && (
                           <div
                             className="absolute inset-0"
@@ -835,6 +822,20 @@ function App() {
                               opacity: 0.96
                             }}
                           />
+                        )}
+
+                        {isPvc && (
+                          <div
+                            className="grid h-full w-full"
+                            style={{
+                              gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(width / 0.4))}, minmax(0,1fr))`,
+                              gridTemplateRows: `repeat(${Math.max(1, Math.ceil(height / 0.4))}, minmax(0,1fr))`
+                            }}
+                          >
+                            {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map(
+                              (_, i) => <div key={i} className="border border-white/20" />
+                            )}
+                          </div>
                         )}
 
                         {isPoly &&
@@ -890,7 +891,8 @@ function App() {
                                             transform: 'translateY(-50%)',
                                             background:
                                               'linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(255,255,255,0.2) 35%, rgba(0,0,0,0.4))',
-                                            boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 5px rgba(0,0,0,0.25)'
+                                            boxShadow:
+                                              'inset 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 5px rgba(0,0,0,0.25)'
                                           }
                                         : {
                                             top: 0,
@@ -900,7 +902,8 @@ function App() {
                                             transform: 'translateX(-50%)',
                                             background:
                                               'linear-gradient(to right, rgba(0,0,0,0.35), rgba(255,255,255,0.2) 35%, rgba(0,0,0,0.4))',
-                                            boxShadow: 'inset 2px 0 5px rgba(0,0,0,0.25), inset -2px 0 5px rgba(0,0,0,0.25)'
+                                            boxShadow:
+                                              'inset 2px 0 5px rgba(0,0,0,0.25), inset -2px 0 5px rgba(0,0,0,0.25)'
                                           }
                                     }
                                   />
@@ -912,6 +915,7 @@ function App() {
                       </div>
                     ) : null}
                   </div>
+
                   {result ? (
                     isPoly && (
                       <div className="pointer-events-none absolute right-5 top-1/2 flex -translate-y-1/2 flex-col items-center rounded-lg bg-slate-950/70 px-2 py-1 text-cyan-100">
