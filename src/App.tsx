@@ -818,6 +818,7 @@ function App() {
                           backgroundPosition: 'center'
                         }}
                       >
+                        {/* ✅ conservar overlay de zacate */}
                         {isZacate && (
                           <div
                             className="absolute inset-0"
@@ -825,6 +826,19 @@ function App() {
                               backgroundImage:
                                 'repeating-linear-gradient(95deg, rgba(14,40,18,0.12) 0 2px, rgba(0,0,0,0) 2px 7px), repeating-linear-gradient(25deg, rgba(190,234,120,0.08) 0 1px, rgba(0,0,0,0) 1px 9px)',
                               mixBlendMode: 'overlay'
+                            }}
+                          />
+                        )}
+
+                        {/* ✅ conservar textura real de policarbonato (refuerzo visual) */}
+                        {isPoly && (
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage: `url(${POLY_TEXTURES[polyColor]})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              opacity: 0.96
                             }}
                           />
                         )}
@@ -843,18 +857,7 @@ function App() {
                           </div>
                         )}
 
-                        {isPoly && (
-                          <div
-                            className="absolute inset-0"
-                            style={{
-                              backgroundImage: `url(${POLY_TEXTURES[polyColor]})`,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              opacity: 0.96
-                            }}
-                          />
-                        )}
-
+                        {/* ✅ conservar seam lines de policarbonato */}
                         {isPoly &&
                           polySeamPositions.map((leftPct) => (
                             <div
@@ -864,6 +867,7 @@ function App() {
                             />
                           ))}
 
+                        {/* ✅ conservar WPC acanalado (4 canales) */}
                         {isWpc && (
                           <div className={`absolute inset-0 ${wpcHorizontal ? 'flex flex-col' : 'flex flex-row'}`}>
                             {Array.from({
@@ -930,6 +934,7 @@ function App() {
                       </div>
                     ) : null}
                   </div>
+
                   {result ? (
                     isPoly && (
                       <div className="pointer-events-none absolute right-5 top-1/2 flex -translate-y-1/2 flex-col items-center rounded-lg bg-slate-950/70 px-2 py-1 text-cyan-100">
