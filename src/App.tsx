@@ -56,13 +56,15 @@ const STATUS_META: Record<EmployeeStatus, { label: string; tone: string }> = {
   logout: { label: 'Desconectado', tone: 'bg-gray-200 text-gray-700' }
 };
 
+const toAssetUrl = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
+
 const POLY_TEXTURES: Record<SheetColor, string> = {
-  transparente: '/textures/transparente.png',
-  bronce: '/textures/BRONCE.png',
-  azul: '/textures/azul.png',
-  gris: '/textures/gris.png',
-  blanco: '/textures/blanco.png',
-  humo: '/textures/Humo.png'
+  transparente: toAssetUrl('textures/transparente.png'),
+  bronce: toAssetUrl('textures/BRONCE.png'),
+  azul: toAssetUrl('textures/azul.png'),
+  gris: toAssetUrl('textures/gris.png'),
+  blanco: toAssetUrl('textures/blanco.png'),
+  humo: toAssetUrl('textures/Humo.png')
 };
 
 interface MetricInputProps {
@@ -122,7 +124,7 @@ function App() {
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>('activo');
 
   const centerInnerRef = useRef<HTMLDivElement | null>(null);
-  const customVisualizerRef = useRef<HTMLDivElement | null>(null);
+  const customVisualizerRef = useRef<HTMLElement | null>(null);
   const [centerInnerWidth, setCenterInnerWidth] = useState(1100);
 
   const width = parseMetric(widthInput);
@@ -247,10 +249,13 @@ function App() {
   const resolvedSheetThickness = isPoly ? thickness : 'n/a';
   const resolvedSheetColor = isPoly ? polyColor : isPvc ? pvcColor : isWpc ? wpcTone : zacateHeight;
 
+  const logoUrl = toAssetUrl('logo.png');
+
   const editedTotal = useMemo(() => {
     if (!displayMaterials.length) return result?.total ?? 0;
     return displayMaterials.reduce((sum, material) => sum + materialLineTotal(material), 0);
   }, [displayMaterials, result]);
+  const roundedEditedTotal = Number.isInteger(editedTotal) ? editedTotal : Math.ceil(editedTotal);
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
   const previewAspect = Math.max(0.45, Math.min(1.9, height / Math.max(width, 0.01)));
@@ -402,7 +407,7 @@ function App() {
         radial-gradient(circle at 20% 30%, rgba(124,180,72,0.26), transparent 34%),
         radial-gradient(circle at 75% 55%, rgba(92,142,56,0.24), transparent 38%),
         linear-gradient(155deg, rgba(16,56,22,0.58), rgba(56,110,42,0.36)),
-        url('/textures/zacate-grass.svg')`
+        url('${toAssetUrl('textures/zacate-grass.svg')}')`
       : isWpc
         ? `linear-gradient(160deg, ${wpcTone === 'nogal' ? '#6b4423' : wpcTone === 'grafito' ? '#4b5563' : '#b67946'}, #2f2418)`
         : `url(${POLY_TEXTURES[polyColor]})`;
@@ -419,7 +424,7 @@ function App() {
     >
       <aside className="flex h-screen flex-col overflow-hidden border-r border-black/10 bg-white">
         <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
-          <img src="/logo.png" alt="Policarbonato CR" className="h-8 w-8" />
+          <img src={logoUrl} alt="Policarbonato CR" className="h-8 w-8" />
           <h2 className="text-base font-bold text-[#00011a]">Policarbonato CR</h2>
         </div>
         <nav className="flex-1 space-y-1 p-4">
@@ -680,7 +685,7 @@ function App() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-gray-200 bg-white px-6 py-4">
+            <section ref={customVisualizerRef} className="rounded-xl border border-gray-200 bg-white px-6 py-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold uppercase text-gray-700">
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00011a] text-xs font-bold text-white">
@@ -689,7 +694,7 @@ function App() {
                   Vista previa y captura
                 </h2>
                 <div className="flex items-center gap-3">
-                  <img src="/logo.png" alt="Policarbonato CR" className="h-8" />
+                  <img src={logoUrl} alt="Policarbonato CR" className="h-8" />
                   <button
                     onClick={captureCustomVisualizer}
                     className="rounded-lg border border-gray-200 p-2 hover:bg-gray-50"
@@ -701,7 +706,6 @@ function App() {
               </div>
 
               <div
-                ref={customVisualizerRef}
                 className="rounded-2xl border border-slate-800/80 p-4 shadow-[0_20px_50px_rgba(2,6,23,0.35)]"
                 style={{ backgroundImage: surfaceTexture }}
               >
@@ -781,27 +785,6 @@ function App() {
                   />
 
                   <div
-                    aria-hidden
-                    className="pointer-events-none absolute right-[56px] top-[44px] text-[11px] text-cyan-100/90"
-                  >
-                    Cota superior
-                  </div>
-
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute bottom-[34px] right-[56px] text-[11px] text-cyan-100/70"
-                  >
-                    Línea base
-                  </div>
-
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute left-[56px] top-[44px] text-[11px] text-cyan-100/90"
-                  >
-                    Cota vertical
-                  </div>
-
-                  <div
                     className="absolute left-1/2 top-1/2"
                     style={{
                       width: visualizerFrame.widthPx,
@@ -818,7 +801,6 @@ function App() {
                           backgroundPosition: 'center'
                         }}
                       >
-                        {/* ✅ conservar overlay de zacate */}
                         {isZacate && (
                           <div
                             className="absolute inset-0"
@@ -830,7 +812,6 @@ function App() {
                           />
                         )}
 
-                        {/* ✅ conservar textura real de policarbonato (refuerzo visual) */}
                         {isPoly && (
                           <div
                             className="absolute inset-0"
@@ -851,13 +832,12 @@ function App() {
                               gridTemplateRows: `repeat(${Math.max(1, Math.ceil(height / 0.4))}, minmax(0,1fr))`
                             }}
                           >
-                            {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map((_, i) => (
-                              <div key={i} className="border border-white/20" />
-                            ))}
+                            {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map(
+                              (_, i) => <div key={i} className="border border-white/20" />
+                            )}
                           </div>
                         )}
 
-                        {/* ✅ conservar seam lines de policarbonato */}
                         {isPoly &&
                           polySeamPositions.map((leftPct) => (
                             <div
@@ -867,7 +847,6 @@ function App() {
                             />
                           ))}
 
-                        {/* ✅ conservar WPC acanalado (4 canales) */}
                         {isWpc && (
                           <div className={`absolute inset-0 ${wpcHorizontal ? 'flex flex-col' : 'flex flex-row'}`}>
                             {Array.from({
@@ -912,7 +891,8 @@ function App() {
                                             transform: 'translateY(-50%)',
                                             background:
                                               'linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(255,255,255,0.2) 35%, rgba(0,0,0,0.4))',
-                                            boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 5px rgba(0,0,0,0.25)'
+                                            boxShadow:
+                                              'inset 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 5px rgba(0,0,0,0.25)'
                                           }
                                         : {
                                             top: 0,
@@ -922,7 +902,8 @@ function App() {
                                             transform: 'translateX(-50%)',
                                             background:
                                               'linear-gradient(to right, rgba(0,0,0,0.35), rgba(255,255,255,0.2) 35%, rgba(0,0,0,0.4))',
-                                            boxShadow: 'inset 2px 0 5px rgba(0,0,0,0.25), inset -2px 0 5px rgba(0,0,0,0.25)'
+                                            boxShadow:
+                                              'inset 2px 0 5px rgba(0,0,0,0.25), inset -2px 0 5px rgba(0,0,0,0.25)'
                                           }
                                     }
                                   />
@@ -1003,15 +984,13 @@ function App() {
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col justify-between p-5 pt-4">
-            <div className="rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 p-6 text-center shadow-2xl">
-              <p className="mb-2 text-xs font-bold uppercase tracking-widest text-cyan-100">Total estimado</p>
-              <p className="text-4xl font-black tracking-tight">
-                ₡{editedTotal.toLocaleString('es-CR', { minimumFractionDigits: 0 })}
-              </p>
-            </div>
+          <div className="flex flex-1 flex-col p-5 pt-4">
+            <div className="mt-auto space-y-3 pb-2">
+              <div className="rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 p-6 text-center shadow-2xl">
+                <p className="mb-2 text-xs font-bold uppercase tracking-widest text-cyan-100">Total estimado</p>
+                <p className="text-4xl font-black tracking-tight">₡{roundedEditedTotal.toLocaleString('es-CR')}</p>
+              </div>
 
-            <div className="mt-6 space-y-3 pb-2">
               <button
                 onClick={() => setShowSaveModal(true)}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 text-sm font-bold uppercase tracking-wider text-white hover:bg-cyan-600"
