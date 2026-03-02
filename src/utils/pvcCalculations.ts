@@ -98,12 +98,11 @@ export function calculatePvcQuote(widthInput: number, heightInput: number, inclu
   };
 }
 
-export const pvcPalette: Record<'rojo' | 'azul' | 'negro' | 'gris' | 'amarillo', { bg: string; border: string }> = {
+export const pvcPalette: Record<'rojo' | 'azul' | 'negro' | 'gris', { bg: string; border: string }> = {
   rojo: { bg: '#dc2626', border: '#991b1b' },
   azul: { bg: '#2563eb', border: '#1e3a8a' },
   negro: { bg: '#111827', border: '#030712' },
-  gris: { bg: '#9ca3af', border: '#4b5563' },
-  amarillo: { bg: '#facc15', border: '#ca8a04' }
+  gris: { bg: '#9ca3af', border: '#4b5563' }
 };
 
 export type PvcColor = keyof typeof pvcPalette;

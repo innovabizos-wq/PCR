@@ -67,14 +67,6 @@ const POLY_TEXTURES: Record<SheetColor, string> = {
   humo: toAssetUrl('textures/Humo.png')
 };
 
-const PVC_COLOR_LABELS: Record<PvcColor, string> = {
-  rojo: 'Rojo',
-  azul: 'Azul',
-  negro: 'Negro',
-  gris: 'Gris',
-  amarillo: 'Amarillo'
-};
-
 interface MetricInputProps {
   label: string;
   value: string;
@@ -122,8 +114,6 @@ function App() {
 
   const [pvcColor, setPvcColor] = useState<PvcColor>('rojo');
   const [includeBorders, setIncludeBorders] = useState(false);
-  const [pvcTileColors, setPvcTileColors] = useState<PvcColor[]>([]);
-  const [pvcTilePicker, setPvcTilePicker] = useState<{ index: number; x: number; y: number } | null>(null);
 
   const [wpcType, setWpcType] = useState<WpcPanelType>('interior');
   const [wpcUseRecuts, setWpcUseRecuts] = useState(true);
@@ -246,57 +236,7 @@ function App() {
     zacateHeight
   ]);
 
-  useEffect(() => {
-    if (!isPvc || width <= 0 || height <= 0) {
-      setPvcTileColors([]);
-      setPvcTilePicker(null);
-      return;
-    }
-
-    const neededTiles = Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4));
-    setPvcTileColors((prev) => Array.from({ length: neededTiles }, (_, i) => prev[i] ?? pvcColor));
-  }, [isPvc, pvcColor, width, height]);
-
-  useEffect(() => {
-    if (!pvcTilePicker) return;
-    const closePicker = () => setPvcTilePicker(null);
-    window.addEventListener('click', closePicker);
-    return () => window.removeEventListener('click', closePicker);
-  }, [pvcTilePicker]);
-
-  const pvcDesignedMaterials = useMemo(() => {
-    if (!isPvc || !result) return null;
-    const floorRow = result.materials.find((m) => m.id === 'pvc-floor');
-    if (!floorRow) return null;
-
-    const qtyByColor = pvcTileColors.reduce<Record<PvcColor, number>>(
-      (acc, color) => {
-        acc[color] += 1;
-        return acc;
-      },
-      { rojo: 0, azul: 0, negro: 0, gris: 0, amarillo: 0 }
-    );
-
-    const floorRows: Material[] = (Object.keys(qtyByColor) as PvcColor[])
-      .filter((color) => qtyByColor[color] > 0)
-      .map((color) => ({
-        ...floorRow,
-        id: `pvc-floor-${color}`,
-        name: `Piso PVC 40x40 · ${PVC_COLOR_LABELS[color]}`,
-        description: `${qtyByColor[color]} piezas`,
-        quantity: qtyByColor[color],
-        total: qtyByColor[color] * floorRow.unitPrice
-      }));
-
-    const accessoryRows = result.materials.filter((m) => m.id !== 'pvc-floor');
-    return [...floorRows, ...accessoryRows];
-  }, [isPvc, pvcTileColors, result]);
-
-  const displayMaterials = useMemo(() => {
-    if (isPvc) return pvcDesignedMaterials ?? editedMaterials ?? result?.materials ?? [];
-    return editedMaterials ?? result?.materials ?? [];
-  }, [editedMaterials, isPvc, pvcDesignedMaterials, result]);
-
+  const displayMaterials = useMemo(() => editedMaterials ?? result?.materials ?? [], [editedMaterials, result]);
   const materialLineTotal = (material: Material): number => {
     const qty = material.quantity ?? 0;
     const unit = material.unitPrice ?? 0;
@@ -315,7 +255,6 @@ function App() {
     if (!displayMaterials.length) return result?.total ?? 0;
     return displayMaterials.reduce((sum, material) => sum + materialLineTotal(material), 0);
   }, [displayMaterials, result]);
-
   const roundedEditedTotal = Number.isInteger(editedTotal) ? editedTotal : Math.ceil(editedTotal);
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
@@ -347,10 +286,6 @@ function App() {
   const wpcPanelWidthM = wpcType === 'interior' ? 0.16 : 0.22;
   const wpcHorizontal = isWpc && !wpcVerticalInstall;
 
-  // Para el grid de PVC editable (doble click por baldosa)
-  const pvcCols = Math.max(1, Math.ceil(width / 0.4));
-  const pvcRows = Math.max(1, Math.ceil(height / 0.4));
-
   const LEFT_WIDTH = 260;
   const RIGHT_PANEL_MAX = 340;
 
@@ -362,9 +297,9 @@ function App() {
     if (activeModule === 'pvc') {
       return {
         aLabel: 'Piso PVC',
-        aValue: currentMaterials
-          .filter((m) => m.id.startsWith('pvc-floor'))
-          .reduce((sum, m) => sum + materialLineTotal(m), 0),
+        aValue: materialLineTotal(
+          currentMaterials.find((m) => m.id === 'pvc-floor') ?? { id: '', name: '', quantity: 0, unitPrice: 0, total: 0 }
+        ),
         bLabel: 'Bordes y Esquineros',
         bValue: currentMaterials
           .filter((m) => m.id === 'pvc-borders' || m.id === 'pvc-corners')
@@ -580,7 +515,6 @@ function App() {
           </header>
 
           <div className="space-y-4 px-6 py-6">
-            {/* Sección 1: NO debe llevar customVisualizerRef */}
             <section className="rounded-xl border border-gray-200 bg-white px-6 py-4">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase text-gray-700">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00011a] text-xs font-bold text-white">
@@ -751,7 +685,6 @@ function App() {
               </div>
             </section>
 
-            {/* Sección 3: AQUÍ va el ref para capturar */}
             <section ref={customVisualizerRef} className="rounded-xl border border-gray-200 bg-white px-6 py-4">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="flex items-center gap-2 text-sm font-bold uppercase text-gray-700">
@@ -879,65 +812,6 @@ function App() {
                           />
                         )}
 
-                        {isPvc && (
-                          <div
-                            className="grid h-full w-full"
-                            style={{
-                              gridTemplateColumns: `repeat(${pvcCols}, minmax(0,1fr))`,
-                              gridTemplateRows: `repeat(${pvcRows}, minmax(0,1fr))`
-                            }}
-                          >
-                            {Array.from({ length: pvcCols * pvcRows }).map((_, i) => {
-                              const tileColor = pvcTileColors[i] ?? pvcColor;
-                              return (
-                                <button
-                                  key={i}
-                                  type="button"
-                                  onDoubleClick={(e) => {
-                                    e.stopPropagation();
-                                    setPvcTilePicker({ index: i, x: e.clientX, y: e.clientY });
-                                  }}
-                                  className="border border-white/20"
-                                  style={{
-                                    background: `linear-gradient(135deg, ${pvcPalette[tileColor].bg}, ${pvcPalette[tileColor].border})`
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        )}
-
-                        {isPvc && pvcTilePicker && (
-                          <div
-                            className="absolute z-20 rounded-lg border border-slate-600 bg-slate-900/95 p-2 shadow-xl"
-                            style={{
-                              left: Math.max(8, Math.min(pvcTilePicker.x - 120, visualizerFrame.widthPx - 150)),
-                              top: Math.max(8, Math.min(pvcTilePicker.y - 240, visualizerFrame.heightPx - 44))
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div className="grid grid-cols-5 gap-1">
-                              {(Object.keys(pvcPalette) as PvcColor[]).map((color) => (
-                                <button
-                                  key={color}
-                                  type="button"
-                                  title={PVC_COLOR_LABELS[color] ?? color}
-                                  className="h-6 w-6 rounded border border-white/30"
-                                  style={{ background: pvcPalette[color].bg }}
-                                  onClick={() => {
-                                    setPvcTileColors((prev) => {
-                                      const next = [...prev];
-                                      next[pvcTilePicker.index] = color;
-                                      return next;
-                                    });
-                                    setPvcTilePicker(null);
-                                  }}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
                         {isPoly && (
                           <div
                             className="absolute inset-0"
@@ -948,6 +822,20 @@ function App() {
                               opacity: 0.96
                             }}
                           />
+                        )}
+
+                        {isPvc && (
+                          <div
+                            className="grid h-full w-full"
+                            style={{
+                              gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(width / 0.4))}, minmax(0,1fr))`,
+                              gridTemplateRows: `repeat(${Math.max(1, Math.ceil(height / 0.4))}, minmax(0,1fr))`
+                            }}
+                          >
+                            {Array.from({ length: Math.max(1, Math.ceil(width / 0.4) * Math.ceil(height / 0.4)) }).map(
+                              (_, i) => <div key={i} className="border border-white/20" />
+                            )}
+                          </div>
                         )}
 
                         {isPoly &&
