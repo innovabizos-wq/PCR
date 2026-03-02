@@ -20,6 +20,7 @@ export interface WpcCalculationMeta {
   basePieces: number;
   adjustedPieces: number;
   total: number;
+  orientation: 'vertical' | 'horizontal';
 }
 
 const PANEL_HEIGHT_M = 2.9;
@@ -46,12 +47,17 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
   const pieceCoverage = PANEL_HEIGHT_M * config.width;
   const basePieces = Math.ceil(wallArea / pieceCoverage);
 
-  const rows = Math.ceil(effectiveWidth / config.width);
-  const piecesPerRow = Math.max(1, Math.ceil(height / PANEL_HEIGHT_M));
+  const installVertical = options.installVertical;
+  const rows = installVertical
+    ? Math.ceil(effectiveWidth / config.width)
+    : Math.ceil(height / config.width);
+  const piecesPerRow = installVertical
+    ? Math.max(1, Math.ceil(height / PANEL_HEIGHT_M))
+    : Math.max(1, Math.ceil(effectiveWidth / PANEL_HEIGHT_M));
   const minimumPiecesByRows = rows * piecesPerRow;
   let adjustedPieces = Math.max(basePieces, minimumPiecesByRows);
 
-  if (options.installVertical && height < PANEL_HEIGHT_M) {
+  if (installVertical && height < PANEL_HEIGHT_M) {
     adjustedPieces = Math.max(adjustedPieces, rows);
   }
 
@@ -74,7 +80,7 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
     {
       id: 'wpc-panels',
       name: config.label,
-      description: `Área muro ${wallArea.toFixed(2)} m² · cobertura por pieza ${(pieceCoverage).toFixed(3)} m²`,
+      description: `Área muro ${wallArea.toFixed(2)} m² · cobertura por pieza ${(pieceCoverage).toFixed(3)} m² · instalación ${installVertical ? 'vertical' : 'horizontal'}`,
       formula: 'área/cobertura por pieza + ajustes técnicos',
       quantity: adjustedPieces,
       unitPrice: config.unitPrice,
@@ -113,7 +119,8 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
       piecesPerRow,
       basePieces,
       adjustedPieces,
-      total
+      total,
+      orientation: installVertical ? 'vertical' : 'horizontal'
     }
   };
 }

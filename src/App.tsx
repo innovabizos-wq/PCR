@@ -56,6 +56,15 @@ const STATUS_META: Record<EmployeeStatus, { label: string; tone: string }> = {
   logout: { label: 'Desconectado', tone: 'bg-gray-200 text-gray-700' }
 };
 
+const POLY_TEXTURES: Record<SheetColor, string> = {
+  transparente: '/textures/transparente.png',
+  bronce: '/textures/BRONCE.png',
+  azul: '/textures/azul.png',
+  gris: '/textures/gris.png',
+  blanco: '/textures/blanco.png',
+  humo: '/textures/Humo.png'
+};
+
 interface MetricInputProps {
   label: string;
   value: string;
@@ -269,6 +278,9 @@ function App() {
     return positions;
   }, [isPoly, width]);
 
+  const wpcPanelWidthM = wpcType === 'interior' ? 0.16 : 0.22;
+  const wpcHorizontal = isWpc && !wpcVerticalInstall;
+
   const LEFT_WIDTH = 260;
   const RIGHT_PANEL_MAX = 340;
 
@@ -386,10 +398,14 @@ function App() {
   const activeTexture = isPvc
     ? `repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 6px, rgba(255,255,255,.03) 6px 12px), linear-gradient(135deg, ${pvcPalette[pvcColor].bg}, ${pvcPalette[pvcColor].border})`
     : isZacate
-      ? `linear-gradient(130deg, rgba(66,136,59,.28), rgba(20,54,24,.40)), url('/textures/zacate-grass.svg')`
+      ? `
+        radial-gradient(circle at 20% 30%, rgba(124,180,72,0.26), transparent 34%),
+        radial-gradient(circle at 75% 55%, rgba(92,142,56,0.24), transparent 38%),
+        linear-gradient(155deg, rgba(16,56,22,0.58), rgba(56,110,42,0.36)),
+        url('/textures/zacate-grass.svg')`
       : isWpc
         ? `linear-gradient(160deg, ${wpcTone === 'nogal' ? '#6b4423' : wpcTone === 'grafito' ? '#4b5563' : '#b67946'}, #2f2418)`
-        : `url(/textures/${polyColor === 'humo' ? 'Humo' : polyColor}.png)`;
+        : `url(${POLY_TEXTURES[polyColor]})`;
 
   return (
     <div
@@ -615,7 +631,7 @@ function App() {
                         checked={wpcVerticalInstall}
                         onChange={(e) => setWpcVerticalInstall(e.target.checked)}
                       />
-                      Instalar vertical
+                      Instalar vertical (desactivar = horizontal lateral)
                     </label>
                   </>
                 )}
@@ -802,6 +818,31 @@ function App() {
                           backgroundPosition: 'center'
                         }}
                       >
+                        {/* ✅ conservar overlay de zacate */}
+                        {isZacate && (
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage:
+                                'repeating-linear-gradient(95deg, rgba(14,40,18,0.12) 0 2px, rgba(0,0,0,0) 2px 7px), repeating-linear-gradient(25deg, rgba(190,234,120,0.08) 0 1px, rgba(0,0,0,0) 1px 9px)',
+                              mixBlendMode: 'overlay'
+                            }}
+                          />
+                        )}
+
+                        {/* ✅ conservar textura real de policarbonato (refuerzo visual) */}
+                        {isPoly && (
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage: `url(${POLY_TEXTURES[polyColor]})`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                              opacity: 0.96
+                            }}
+                          />
+                        )}
+
                         {isPvc && (
                           <div
                             className="grid h-full w-full"
@@ -816,6 +857,7 @@ function App() {
                           </div>
                         )}
 
+                        {/* ✅ conservar seam lines de policarbonato */}
                         {isPoly &&
                           polySeamPositions.map((leftPct) => (
                             <div
@@ -824,9 +866,75 @@ function App() {
                               style={{ left: `${leftPct}%` }}
                             />
                           ))}
+
+                        {/* ✅ conservar WPC acanalado (4 canales) */}
+                        {isWpc && (
+                          <div className={`absolute inset-0 ${wpcHorizontal ? 'flex flex-col' : 'flex flex-row'}`}>
+                            {Array.from({
+                              length: wpcHorizontal
+                                ? Math.max(1, Math.ceil(height / wpcPanelWidthM))
+                                : Math.max(1, Math.ceil(width / wpcPanelWidthM))
+                            }).map((_, i) => (
+                              <div
+                                key={`wpc-panel-${i}`}
+                                className={`relative border border-black/20 ${wpcHorizontal ? 'w-full' : 'h-full'}`}
+                                style={{
+                                  flex: '1 1 0%',
+                                  background:
+                                    wpcTone === 'nogal'
+                                      ? 'linear-gradient(90deg, #5d371d, #784723, #5f391e)'
+                                      : wpcTone === 'grafito'
+                                        ? 'linear-gradient(90deg, #4f5560, #646c78, #4f5560)'
+                                        : 'linear-gradient(90deg, #b57945, #cc8b53, #b47843)'
+                                }}
+                              >
+                                <div
+                                  className="absolute inset-0"
+                                  style={{
+                                    backgroundImage: wpcHorizontal
+                                      ? 'repeating-linear-gradient(0deg, rgba(34,20,10,0.24) 0 2px, rgba(255,255,255,0.05) 2px 4px, rgba(0,0,0,0) 4px 11px)'
+                                      : 'repeating-linear-gradient(90deg, rgba(34,20,10,0.24) 0 2px, rgba(255,255,255,0.05) 2px 4px, rgba(0,0,0,0) 4px 11px)',
+                                    opacity: 0.5
+                                  }}
+                                />
+
+                                {Array.from({ length: 4 }).map((_, channel) => (
+                                  <div
+                                    key={`wpc-channel-${i}-${channel}`}
+                                    className="absolute"
+                                    style={
+                                      wpcHorizontal
+                                        ? {
+                                            left: 0,
+                                            right: 0,
+                                            top: `${((channel + 0.5) / 4) * 100}%`,
+                                            height: '10%',
+                                            transform: 'translateY(-50%)',
+                                            background:
+                                              'linear-gradient(to bottom, rgba(0,0,0,0.35), rgba(255,255,255,0.2) 35%, rgba(0,0,0,0.4))',
+                                            boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.25), inset 0 -2px 5px rgba(0,0,0,0.25)'
+                                          }
+                                        : {
+                                            top: 0,
+                                            bottom: 0,
+                                            left: `${((channel + 0.5) / 4) * 100}%`,
+                                            width: '12%',
+                                            transform: 'translateX(-50%)',
+                                            background:
+                                              'linear-gradient(to right, rgba(0,0,0,0.35), rgba(255,255,255,0.2) 35%, rgba(0,0,0,0.4))',
+                                            boxShadow: 'inset 2px 0 5px rgba(0,0,0,0.25), inset -2px 0 5px rgba(0,0,0,0.25)'
+                                          }
+                                    }
+                                  />
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : null}
                   </div>
+
                   {result ? (
                     isPoly && (
                       <div className="pointer-events-none absolute right-5 top-1/2 flex -translate-y-1/2 flex-col items-center rounded-lg bg-slate-950/70 px-2 py-1 text-cyan-100">
