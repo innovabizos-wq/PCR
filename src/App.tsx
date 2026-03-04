@@ -240,6 +240,7 @@ function App() {
     zacateHeight
   ]);
 
+  // ✅ versión corta (main)
   const displayMaterials = useMemo(() => editedMaterials ?? result?.materials ?? [], [editedMaterials, result]);
 
   const materialLineTotal = (material: Material): number => {
@@ -261,6 +262,7 @@ function App() {
     return displayMaterials.reduce((sum, material) => sum + materialLineTotal(material), 0);
   }, [displayMaterials, result]);
 
+  // ✅ BUG FIX: solo una vez
   const roundedEditedTotal = Number.isInteger(editedTotal) ? editedTotal : Math.ceil(editedTotal);
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
@@ -316,7 +318,13 @@ function App() {
       return {
         aLabel: 'Zacate sintético 35mm',
         aValue: materialLineTotal(
-          currentMaterials.find((m) => m.id === 'zacate-35mm') ?? { id: '', name: '', quantity: 0, unitPrice: 0, total: 0 }
+          currentMaterials.find((m) => m.id === 'zacate-35mm') ?? {
+            id: '',
+            name: '',
+            quantity: 0,
+            unitPrice: 0,
+            total: 0
+          }
         ),
         bLabel: 'Área facturada',
         bValue: 0
@@ -340,7 +348,84 @@ function App() {
     };
   }, [activeModule, displayMaterials]);
 
-  const exportPDF = () => alert('Función de exportar PDF en desarrollo');
+  const sanitizePdfText = (value: string): string =>
+    value
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[()\\]/g, (char) => `\\${char}`);
+
+  const buildPdfBlob = (lines: string[]): Blob => {
+    const content = ['BT', '/F1 11 Tf', '40 800 Td'];
+    lines.forEach((line, index) => {
+      if (index > 0) content.push('0 -16 Td');
+      content.push(`(${sanitizePdfText(line)}) Tj`);
+    });
+    content.push('ET');
+    const stream = content.join('\n');
+
+    const objects = [
+      '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+      '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+      '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
+      '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
+      `5 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`
+    ];
+
+    let pdf = '%PDF-1.4\n';
+    const offsets: number[] = [0];
+    for (const obj of objects) {
+      offsets.push(pdf.length);
+      pdf += obj;
+    }
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n`;
+    pdf += '0000000000 65535 f \n';
+    for (let i = 1; i < offsets.length; i += 1) {
+      pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+    }
+
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+    return new Blob([pdf], { type: 'application/pdf' });
+  };
+
+  // ✅ exportPDF real (no alert)
+  const exportPDF = () => {
+    if (!result) return;
+
+    const moduleLabel = isPvc ? 'Piso PVC' : isZacate ? 'Zacate Artificial' : isWpc ? 'Tablilla WPC' : 'Policarbonato';
+    const timestamp = new Date();
+    const lines = [
+      'Cotizacion - Policarbonato CR',
+      `${timestamp.toLocaleDateString('es-CR')} ${timestamp.toLocaleTimeString('es-CR')}`,
+      '',
+      `Modulo: ${moduleLabel}`,
+      `Dimensiones: ${width.toFixed(2)}m x ${height.toFixed(2)}m`,
+      `Piezas/Paneles: ${result.numSheets}`,
+      '',
+      'Materiales:'
+    ];
+
+    displayMaterials.forEach((material, index) => {
+      lines.push(
+        `${index + 1}. ${material.name} | Cant: ${(material.quantity ?? 0).toFixed(2)} | P.Unit: ${formatCurrency(
+          material.unitPrice ?? 0
+        )} | Total: ${formatCurrency(materialLineTotal(material))}`
+      );
+    });
+
+    lines.push('', `Total estimado: ${formatCurrency(roundedEditedTotal)}`);
+
+    const blob = buildPdfBlob(lines);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cotizacion_${moduleLabel.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const shareWhatsApp = () => {
     const title = isPvc ? 'Piso PVC' : isZacate ? 'Zacate' : isWpc ? 'Tablilla WPC' : 'Policarbonato';
@@ -657,7 +742,11 @@ function App() {
                           </select>
                         </div>
                         <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
-                          <input type="checkbox" checked={wpcUseRecuts} onChange={(e) => setWpcUseRecuts(e.target.checked)} />
+                          <input
+                            type="checkbox"
+                            checked={wpcUseRecuts}
+                            onChange={(e) => setWpcUseRecuts(e.target.checked)}
+                          />
                           Optimizar con recortes
                         </label>
                         <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
@@ -715,7 +804,7 @@ function App() {
                   </div>
                 </section>
 
-                {/* ÚNICO ref correcto: aquí se captura */}
+                {/* ✅ ÚNICO ref correcto: aquí se captura */}
                 <section ref={customVisualizerRef} className="rounded-xl border border-gray-200 bg-white px-6 py-4">
                   <div className="mb-3 flex items-center justify-between">
                     <h2 className="flex items-center gap-2 text-sm font-bold uppercase text-gray-700">
