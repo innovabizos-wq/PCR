@@ -124,9 +124,21 @@ export default function BillingPage({ logoUrl }: BillingPageProps) {
         </div>
 
         <div className="mb-4 grid gap-3 md:grid-cols-4">
-          <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Nombre cliente" defaultValue="Cliente genérico" />
-          <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Identificación" defaultValue={selectedProforma.clientId} />
-          <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Teléfono" defaultValue={selectedProforma.phone} />
+          <input
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Nombre cliente"
+            defaultValue="Cliente genérico"
+          />
+          <input
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Identificación"
+            defaultValue={selectedProforma.clientId}
+          />
+          <input
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Teléfono"
+            defaultValue={selectedProforma.phone}
+          />
           <select
             value={selectedProduct}
             onChange={(e) => setSelectedProduct(e.target.value as BillingProduct)}

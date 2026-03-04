@@ -29,7 +29,10 @@ interface ProformaPreviewProps {
 
 export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps) {
   const subtotal = data.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-  const discountTotal = data.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice * ((line.discountPct ?? 0) / 100), 0);
+  const discountTotal = data.lines.reduce(
+    (sum, line) => sum + line.quantity * line.unitPrice * ((line.discountPct ?? 0) / 100),
+    0
+  );
   const netSubtotal = subtotal - discountTotal;
   const iva = netSubtotal * 0.13;
   const total = netSubtotal + iva;
@@ -82,6 +85,7 @@ export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps)
             const lineSubtotal = line.quantity * line.unitPrice;
             const lineDiscount = lineSubtotal * ((line.discountPct ?? 0) / 100);
             const lineTotal = lineSubtotal - lineDiscount;
+
             return (
               <tr key={line.id} className="border-b border-slate-100 align-top">
                 <td className="py-2 pr-2">
@@ -99,11 +103,26 @@ export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps)
       </table>
 
       <div className="ml-auto w-[260px] space-y-1 text-sm">
-        <div className="flex justify-between border-b border-slate-100 py-1"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-        <div className="flex justify-between border-b border-slate-100 py-1"><span>Descuento</span><span className="text-red-500">-{formatCurrency(discountTotal)}</span></div>
-        <div className="flex justify-between border-b border-slate-100 py-1"><span>Subtotal Neto</span><span>{formatCurrency(netSubtotal)}</span></div>
-        <div className="flex justify-between border-b border-slate-100 py-1"><span>IVA 13%</span><span>{formatCurrency(iva)}</span></div>
-        <div className="flex justify-between border-t-2 border-[#00011a] py-2 text-base font-black text-[#00011a]"><span>Total</span><span>{formatCurrency(total)}</span></div>
+        <div className="flex justify-between border-b border-slate-100 py-1">
+          <span>Subtotal</span>
+          <span>{formatCurrency(subtotal)}</span>
+        </div>
+        <div className="flex justify-between border-b border-slate-100 py-1">
+          <span>Descuento</span>
+          <span className="text-red-500">-{formatCurrency(discountTotal)}</span>
+        </div>
+        <div className="flex justify-between border-b border-slate-100 py-1">
+          <span>Subtotal Neto</span>
+          <span>{formatCurrency(netSubtotal)}</span>
+        </div>
+        <div className="flex justify-between border-b border-slate-100 py-1">
+          <span>IVA 13%</span>
+          <span>{formatCurrency(iva)}</span>
+        </div>
+        <div className="flex justify-between border-t-2 border-[#00011a] py-2 text-base font-black text-[#00011a]">
+          <span>Total</span>
+          <span>{formatCurrency(total)}</span>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-3 border-t border-slate-200 pt-3 text-[10px] text-slate-500 md:grid-cols-2">
