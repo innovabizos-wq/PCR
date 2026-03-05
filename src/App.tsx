@@ -403,6 +403,10 @@ function App() {
           scale?: number;
           backgroundColor?: string;
           foreignObjectRendering?: boolean;
+          scrollX?: number;
+          scrollY?: number;
+          windowWidth?: number;
+          windowHeight?: number;
         }
       ) => Promise<HTMLCanvasElement>;
     };
@@ -499,25 +503,30 @@ function App() {
   const captureCustomVisualizer = async () => {
     const el = customVisualizerRef.current;
     if (!el) return;
-    const html2canvas = await ensureHtml2Canvas();
-    const canvas = await html2canvas(el, {
-      useCORS: true,
-      allowTaint: true,
-      scale: 2,
-      backgroundColor: '#ffffff',
-      foreignObjectRendering: true
-    });
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
+    try {
+      const html2canvas = await ensureHtml2Canvas();
+      const canvas = await html2canvas(el, {
+        useCORS: true,
+        allowTaint: false,
+        scale: Math.max(2, window.devicePixelRatio || 1),
+        backgroundColor: '#ffffff',
+        foreignObjectRendering: false,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        windowWidth: document.documentElement.clientWidth,
+        windowHeight: document.documentElement.clientHeight
+      });
+
+      const url = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = url;
       link.download = `visualizador_material_${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
-    }, 'image/png', 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo capturar el visualizador');
+    }
   };
 
   const moduleCards = [
