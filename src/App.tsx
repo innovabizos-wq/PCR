@@ -920,13 +920,10 @@ function App() {
                         className="pointer-events-none absolute bottom-[34px] right-[56px] top-[44px] border-l border-dashed border-slate-300/60"
                       />
 
-                      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold text-white">
+                      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold leading-none text-white">
                         Ancho · {width.toFixed(2)} m
                       </div>
-                      <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/60 px-3 py-1 text-[11px] font-medium text-white/90">
-                        Escala adaptada al render real ({visualizerFrame.widthPx}px × {visualizerFrame.heightPx}px)
-                      </div>
-                      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold text-white">
+                      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold leading-none text-white">
                         Alto · {height.toFixed(2)} m
                       </div>
 
@@ -1098,18 +1095,15 @@ function App() {
                   )}
                 </div>
 
-                <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-                  <h3 className="mb-3 text-sm font-bold uppercase text-gray-700">Proforma de referencia (base para PDF)</h3>
-                  <div className="overflow-auto rounded-lg bg-slate-100 p-3">
-                    <div ref={proformaExportRef} className="mx-auto min-w-[760px] max-w-[760px]">
-                      <ProformaPreview logoUrl={logoUrl} data={proformaData} />
-                    </div>
-                  </div>
-                </section>
-
                 {error && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>
                 )}
+
+                <div className="sr-only" aria-hidden>
+                  <div ref={proformaExportRef} className="mx-auto min-w-[760px] max-w-[760px]">
+                    <ProformaPreview logoUrl={logoUrl} data={proformaData} />
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -1117,9 +1111,9 @@ function App() {
       </main>
 
       {isCalculatorPage && (
-        <aside className="h-screen p-4">
+        <aside className="h-screen p-4 pt-7">
           <div className="flex h-full flex-col rounded-2xl border border-slate-700/70 bg-[#020817] text-white shadow-[0_16px_45px_rgba(2,6,23,0.35)]">
-            <div className="border-b border-slate-700/80 p-5 pb-4">
+            <div className="border-b border-slate-700/80 p-6 pb-5 pt-7">
               <div className="mb-4 flex items-center gap-2">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-cyan-500">
                   <Calculator className="h-6 w-6" />
@@ -1127,7 +1121,7 @@ function App() {
                 <h3 className="text-lg font-black uppercase">Resumen financiero</h3>
               </div>
 
-              <div className="space-y-2 text-sm">
+              <div className="mt-6 space-y-4 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-300">{panelBreakdown.aLabel}</span>
                   <span className="font-bold text-cyan-300">{formatCurrency(panelBreakdown.aValue)}</span>
