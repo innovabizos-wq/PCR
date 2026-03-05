@@ -867,25 +867,22 @@ function App() {
                     </div>
                   </div>
 
-                  <div
-                    className="rounded-2xl border border-slate-300/90 bg-slate-100 p-4 shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
-                    style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(241,245,249,0.96))' }}
-                  >
+                  <div className="rounded-2xl border border-slate-300 bg-white p-4 shadow-[0_16px_35px_rgba(15,23,42,0.10)]">
                     {result && (
-                      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-300 bg-white/90 p-2 text-[11px] text-slate-700 md:grid-cols-4">
-                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-700 md:grid-cols-4">
+                        <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Ancho real</p>
                           <p className="text-sm font-bold text-slate-900">{width.toFixed(2)} m</p>
                         </div>
-                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Alto real</p>
                           <p className="text-sm font-bold text-slate-900">{height.toFixed(2)} m</p>
                         </div>
-                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Área</p>
                           <p className="text-sm font-bold text-slate-900">{(width * height).toFixed(2)} m²</p>
                         </div>
-                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Piezas</p>
                           <p className="text-sm font-bold text-slate-900">{result.numSheets}</p>
                         </div>
@@ -893,7 +890,7 @@ function App() {
                     )}
 
                     <div
-                      className="relative mx-auto w-full max-w-[920px] overflow-hidden rounded-xl border border-slate-400"
+                      className="relative mx-auto w-full max-w-[920px] overflow-hidden rounded-xl border border-slate-300"
                       style={{ height: previewHeight }}
                     >
                       <div
@@ -901,35 +898,35 @@ function App() {
                         className="absolute inset-0"
                         style={{
                           backgroundImage:
-                            'linear-gradient(to right, rgba(0,0,0,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.5) 1px, transparent 1px)',
+                            'linear-gradient(to right, rgba(100,116,139,0.32) 1px, transparent 1px), linear-gradient(to bottom, rgba(100,116,139,0.32) 1px, transparent 1px), linear-gradient(180deg, rgba(244,246,248,0.98), rgba(233,237,241,0.98))',
                           backgroundSize: '32px 32px'
                         }}
                       />
 
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute left-[56px] right-[56px] top-[44px] border-t border-cyan-100/80"
+                        className="pointer-events-none absolute left-[56px] right-[56px] top-[44px] border-t border-slate-300/80"
                       />
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute bottom-[34px] left-[56px] right-[56px] border-t border-dashed border-cyan-100/40"
+                        className="pointer-events-none absolute bottom-[34px] left-[56px] right-[56px] border-t border-dashed border-slate-300/60"
                       />
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute bottom-[34px] left-[56px] top-[44px] border-l border-cyan-100/80"
+                        className="pointer-events-none absolute bottom-[34px] left-[56px] top-[44px] border-l border-slate-300/80"
                       />
                       <div
                         aria-hidden
-                        className="pointer-events-none absolute bottom-[34px] right-[56px] top-[44px] border-l border-dashed border-cyan-100/40"
+                        className="pointer-events-none absolute bottom-[34px] right-[56px] top-[44px] border-l border-dashed border-slate-300/60"
                       />
 
-                      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-semibold text-cyan-100">
+                      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold text-white">
                         Ancho · {width.toFixed(2)} m
                       </div>
-                      <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-slate-950/60 px-3 py-1 text-[11px] font-medium text-cyan-200/90">
+                      <div className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/60 px-3 py-1 text-[11px] font-medium text-white/90">
                         Escala adaptada al render real ({visualizerFrame.widthPx}px × {visualizerFrame.heightPx}px)
                       </div>
-                      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 rounded-full bg-slate-950/70 px-3 py-1 text-[11px] font-semibold text-cyan-100">
+                      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold text-white">
                         Alto · {height.toFixed(2)} m
                       </div>
 
@@ -1070,13 +1067,13 @@ function App() {
 
                       {result ? (
                         isPoly && (
-                          <div className="pointer-events-none absolute right-5 top-1/2 flex -translate-y-1/2 flex-col items-center rounded-lg bg-slate-950/70 px-2 py-1 text-cyan-100">
+                          <div className="pointer-events-none absolute right-5 top-1/2 flex -translate-y-1/2 flex-col items-center rounded-lg bg-slate-900/70 px-2 py-1 text-white">
                             <span className="text-[11px] font-bold">Caída de agua</span>
                             <span className="text-lg leading-none">↓</span>
                           </div>
                         )
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-center text-cyan-100/80">
+                        <div className="absolute inset-0 flex items-center justify-center text-center text-slate-700/80">
                           <div>
                             <p className="text-sm font-semibold">Visualizador listo</p>
                             <p className="text-xs">Ingresa medidas para renderizar el material.</p>
