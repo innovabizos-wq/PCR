@@ -20,6 +20,8 @@ import {
 import MaterialsTable from './components/MaterialsTable';
 import SaveQuoteModal from './components/SaveQuoteModal';
 import BillingPage from './components/BillingPage';
+import InventoryPage from './components/InventoryPage';
+import ProformaPreview, { ProformaData } from './components/ProformaPreview';
 import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } from './types/calculator';
 import { calculateQuote, formatCurrency } from './utils/calculations';
 import { calculatePvcQuote, pvcPalette, PvcColor } from './utils/pvcCalculations';
@@ -27,21 +29,61 @@ import { calculateZacateQuote } from './utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from './utils/wpcCalculations';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
-type MainPage = 'calculator' | 'billing';
+type MainPage = 'calculator' | 'billing' | 'inventory';
 type WpcTone = 'teca' | 'nogal' | 'grafito';
 type ZacateHeight = '35mm' | '50mm';
 type EmployeeStatus = 'activo' | 'almuerzo' | 'cafe' | 'baño' | 'logout';
 
-type Html2CanvasFn = (
-  element: HTMLElement,
-  options?: { useCORS?: boolean; allowTaint?: boolean; scale?: number }
-) => Promise<HTMLCanvasElement>;
-
 declare global {
   interface Window {
-    html2canvas?: Html2CanvasFn;
+    jspdf?: { jsPDF: new (options?: { orientation?: string; unit?: string; format?: string | number[] }) => JsPdfInstance };
   }
 }
+
+interface JsPdfInstance {
+  internal: { pageSize: { getWidth: () => number; getHeight: () => number } };
+  addImage: (
+    imageData: string,
+    format: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    alias?: string,
+    compression?: 'NONE' | 'FAST' | 'MEDIUM' | 'SLOW'
+  ) => void;
+  save: (filename: string) => void;
+}
+
+const externalScriptCache = new Map<string, Promise<void>>();
+
+const loadExternalScript = (src: string): Promise<void> => {
+  const cached = externalScriptCache.get(src);
+  if (cached) return cached;
+
+  const pending = new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
+    if (existing) {
+      existing.addEventListener('load', () => resolve(), { once: true });
+      existing.addEventListener('error', () => reject(new Error(`No se pudo cargar ${src}`)), { once: true });
+      if (existing.dataset.loaded === 'true') resolve();
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    script.onerror = () => reject(new Error(`No se pudo cargar ${src}`));
+    document.head.appendChild(script);
+  });
+
+  externalScriptCache.set(src, pending);
+  return pending;
+};
 
 const parseMetric = (raw: string): number => {
   const sanitized = raw.replace(',', '.').trim();
@@ -128,6 +170,7 @@ function App() {
 
   const centerInnerRef = useRef<HTMLDivElement | null>(null);
   const customVisualizerRef = useRef<HTMLElement | null>(null);
+  const proformaExportRef = useRef<HTMLDivElement | null>(null);
   const [centerInnerWidth, setCenterInnerWidth] = useState(1100);
 
   const width = parseMetric(widthInput);
@@ -138,6 +181,8 @@ function App() {
   const isZacate = activeModule === 'zacate';
   const isWpc = activeModule === 'wpc';
   const isBillingPage = activePage === 'billing';
+  const isInventoryPage = activePage === 'inventory';
+  const isCalculatorPage = activePage === 'calculator';
 
   useLayoutEffect(() => {
     if (!centerInnerRef.current) return;
@@ -348,83 +393,85 @@ function App() {
     };
   }, [activeModule, displayMaterials]);
 
-  const sanitizePdfText = (value: string): string =>
-    value
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[()\\]/g, (char) => `\\${char}`);
-
-  const buildPdfBlob = (lines: string[]): Blob => {
-    const content = ['BT', '/F1 11 Tf', '40 800 Td'];
-    lines.forEach((line, index) => {
-      if (index > 0) content.push('0 -16 Td');
-      content.push(`(${sanitizePdfText(line)}) Tj`);
-    });
-    content.push('ET');
-    const stream = content.join('\n');
-
-    const objects = [
-      '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-      '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-      '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n',
-      '4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-      `5 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`
-    ];
-
-    let pdf = '%PDF-1.4\n';
-    const offsets: number[] = [0];
-    for (const obj of objects) {
-      offsets.push(pdf.length);
-      pdf += obj;
+  const ensureHtml2Canvas = async () => {
+    const scopedWindow = window as Window & {
+      html2canvas?: (
+        element: HTMLElement,
+        options?: { useCORS?: boolean; allowTaint?: boolean; scale?: number; backgroundColor?: string }
+      ) => Promise<HTMLCanvasElement>;
+    };
+    if (!scopedWindow.html2canvas) {
+      await loadExternalScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
     }
-
-    const xrefOffset = pdf.length;
-    pdf += `xref\n0 ${objects.length + 1}\n`;
-    pdf += '0000000000 65535 f \n';
-    for (let i = 1; i < offsets.length; i += 1) {
-      pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
-    }
-
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
-    return new Blob([pdf], { type: 'application/pdf' });
+    if (!scopedWindow.html2canvas) throw new Error('html2canvas no disponible');
+    return scopedWindow.html2canvas;
   };
 
-  // ✅ exportPDF real (no alert)
-  const exportPDF = () => {
-    if (!result) return;
+  const ensureJsPdf = async () => {
+    if (!window.jspdf?.jsPDF) {
+      await loadExternalScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    }
+    const jsPDF = window.jspdf?.jsPDF;
+    if (!jsPDF) throw new Error('jsPDF no disponible');
+    return jsPDF;
+  };
 
-    const moduleLabel = isPvc ? 'Piso PVC' : isZacate ? 'Zacate Artificial' : isWpc ? 'Tablilla WPC' : 'Policarbonato';
-    const timestamp = new Date();
-    const lines = [
-      'Cotizacion - Policarbonato CR',
-      `${timestamp.toLocaleDateString('es-CR')} ${timestamp.toLocaleTimeString('es-CR')}`,
-      '',
-      `Modulo: ${moduleLabel}`,
-      `Dimensiones: ${width.toFixed(2)}m x ${height.toFixed(2)}m`,
-      `Piezas/Paneles: ${result.numSheets}`,
-      '',
-      'Materiales:'
-    ];
+  const proformaData = useMemo<ProformaData>(() => {
+    const moduleLabel = isPvc ? 'Piso PVC' : isZacate ? 'Zacate artificial' : isWpc ? 'Tablilla WPC' : 'Policarbonato';
+    const rows = displayMaterials.map((material, index) => ({
+      id: material.id ?? `line-${index}`,
+      description: material.name,
+      details: material.description,
+      quantity: Number((material.quantity ?? 0).toFixed(2)),
+      unitPrice: material.unitPrice ?? 0,
+      discountPct: 0
+    }));
 
-    displayMaterials.forEach((material, index) => {
-      lines.push(
-        `${index + 1}. ${material.name} | Cant: ${(material.quantity ?? 0).toFixed(2)} | P.Unit: ${formatCurrency(
-          material.unitPrice ?? 0
-        )} | Total: ${formatCurrency(materialLineTotal(material))}`
-      );
-    });
+    return {
+      quoteNumber: `PREV-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+      date: new Date().toLocaleDateString('es-CR'),
+      clientName: 'Cliente de mostrador',
+      clientId: 'N/D',
+      clientAddress: 'Pendiente',
+      phone: 'Pendiente',
+      deliveryNote: `${moduleLabel} · ${width.toFixed(2)}m x ${height.toFixed(2)}m`,
+      lines: rows.length ? rows : [{ id: 'empty', description: 'Sin líneas (ingrese medidas)', quantity: 1, unitPrice: 0 }],
+      bankAccounts: [
+        { label: 'Banco Nacional', value: '100-01-123-456789' },
+        { label: 'SINPE Móvil', value: '+506 8888-8888' }
+      ],
+      warranty: 'Garantía sujeta al producto, instalación recomendada y condiciones comerciales vigentes.'
+    };
+  }, [displayMaterials, height, isPvc, isWpc, isZacate, width]);
 
-    lines.push('', `Total estimado: ${formatCurrency(roundedEditedTotal)}`);
+  const exportPDF = async () => {
+    if (!result || !proformaExportRef.current) return;
+    try {
+      const html2canvas = await ensureHtml2Canvas();
+      const jsPDF = await ensureJsPdf();
 
-    const blob = buildPdfBlob(lines);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cotizacion_${moduleLabel.replace(/\s+/g, '_').toLowerCase()}_${Date.now()}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+      const canvas = await html2canvas(proformaExportRef.current, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+        backgroundColor: '#ffffff'
+      });
+      const imageData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const ratio = Math.min(pageWidth / canvas.width, pageHeight / canvas.height);
+      const imageWidth = canvas.width * ratio;
+      const imageHeight = canvas.height * ratio;
+      const marginX = (pageWidth - imageWidth) / 2;
+      const marginY = 8;
+      pdf.addImage(imageData, 'PNG', marginX, marginY, imageWidth, imageHeight, undefined, 'FAST');
+
+      const moduleLabel = isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'policarbonato';
+      pdf.save(`cotizacion_${moduleLabel}_${Date.now()}.pdf`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo exportar el PDF');
+    }
   };
 
   const shareWhatsApp = () => {
@@ -446,18 +493,7 @@ function App() {
   const captureCustomVisualizer = async () => {
     const el = customVisualizerRef.current;
     if (!el) return;
-    if (typeof window.html2canvas === 'undefined') {
-      await new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('No se pudo cargar html2canvas'));
-        document.head.appendChild(script);
-      });
-    }
-    const html2canvas = window.html2canvas;
-    if (!html2canvas) return;
+    const html2canvas = await ensureHtml2Canvas();
     const canvas = await html2canvas(el, { useCORS: true, allowTaint: true, scale: 2 });
     canvas.toBlob((blob) => {
       if (!blob) return;
@@ -488,9 +524,6 @@ function App() {
     { id: 'policarbonato' as MaterialModule, label: 'Policarbonato', icon: <Waves className="h-7 w-7" /> }
   ];
 
-  const surfaceTexture =
-    'radial-gradient(circle at 1px 1px, rgba(56,189,248,.20) 1.2px, transparent 1.2px), linear-gradient(155deg, #030712, #020617 55%, #000814)';
-
   const activeTexture = isPvc
     ? `repeating-linear-gradient(45deg, rgba(255,255,255,.10) 0 6px, rgba(255,255,255,.03) 6px 12px), linear-gradient(135deg, ${pvcPalette[pvcColor].bg}, ${pvcPalette[pvcColor].border})`
     : isZacate
@@ -507,7 +540,7 @@ function App() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isBillingPage
+        gridTemplateColumns: isBillingPage || isInventoryPage
           ? `${LEFT_WIDTH}px minmax(0, 1fr)`
           : `${LEFT_WIDTH}px minmax(0, 1fr) ${RIGHT_PANEL_MAX}px`,
         height: '100vh',
@@ -528,7 +561,7 @@ function App() {
           <button
             onClick={() => setActivePage('calculator')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
-              !isBillingPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+              isCalculatorPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
             <Calculator className="h-5 w-5" />
@@ -543,10 +576,15 @@ function App() {
             <FileText className="h-5 w-5" />
             <span className="text-sm font-bold">Facturación</span>
           </button>
-          <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100">
+          <button
+            onClick={() => setActivePage('inventory')}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+              isInventoryPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
             <Package className="h-5 w-5" />
             <span className="text-sm font-medium">Inventario</span>
-          </a>
+          </button>
           <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100">
             <FileText className="h-5 w-5" />
             <span className="text-sm font-medium">Cotizaciones</span>
@@ -615,7 +653,9 @@ function App() {
                   <Menu className="h-6 w-6" />
                 </button>
                 <div>
-                  <h1 className="text-xl font-black uppercase text-[#00011a]">Calculadora Pro v3.2.2</h1>
+                  <h1 className="text-xl font-black uppercase text-[#00011a]">
+                    {isBillingPage ? 'Facturación y Proformas' : isInventoryPage ? 'Inventario Maestro' : 'Calculadora Pro v3.2.2'}
+                  </h1>
                 </div>
               </div>
             </div>
@@ -624,6 +664,8 @@ function App() {
           <div className="space-y-4 px-6 py-6">
             {isBillingPage ? (
               <BillingPage logoUrl={logoUrl} />
+            ) : isInventoryPage ? (
+              <InventoryPage />
             ) : (
               <>
                 <section className="rounded-xl border border-gray-200 bg-white px-6 py-4">
@@ -826,32 +868,32 @@ function App() {
                   </div>
 
                   <div
-                    className="rounded-2xl border border-slate-800/80 p-4 shadow-[0_20px_50px_rgba(2,6,23,0.35)]"
-                    style={{ backgroundImage: surfaceTexture }}
+                    className="rounded-2xl border border-slate-300/90 bg-slate-100 p-4 shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
+                    style={{ backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(241,245,249,0.96))' }}
                   >
                     {result && (
-                      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-cyan-900/40 bg-slate-900/35 p-2 text-[11px] text-cyan-100 md:grid-cols-4">
-                        <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Ancho real</p>
-                          <p className="text-sm font-bold text-white">{width.toFixed(2)} m</p>
+                      <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-300 bg-white/90 p-2 text-[11px] text-slate-700 md:grid-cols-4">
+                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">Ancho real</p>
+                          <p className="text-sm font-bold text-slate-900">{width.toFixed(2)} m</p>
                         </div>
-                        <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Alto real</p>
-                          <p className="text-sm font-bold text-white">{height.toFixed(2)} m</p>
+                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">Alto real</p>
+                          <p className="text-sm font-bold text-slate-900">{height.toFixed(2)} m</p>
                         </div>
-                        <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Área</p>
-                          <p className="text-sm font-bold text-white">{(width * height).toFixed(2)} m²</p>
+                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">Área</p>
+                          <p className="text-sm font-bold text-slate-900">{(width * height).toFixed(2)} m²</p>
                         </div>
-                        <div className="rounded-lg bg-slate-950/30 px-2 py-1.5">
-                          <p className="text-[10px] uppercase tracking-wide text-cyan-300/80">Piezas</p>
-                          <p className="text-sm font-bold text-white">{result.numSheets}</p>
+                        <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                          <p className="text-[10px] uppercase tracking-wide text-slate-500">Piezas</p>
+                          <p className="text-sm font-bold text-slate-900">{result.numSheets}</p>
                         </div>
                       </div>
                     )}
 
                     <div
-                      className="relative mx-auto w-full max-w-[920px] overflow-hidden rounded-xl border border-cyan-900/50"
+                      className="relative mx-auto w-full max-w-[920px] overflow-hidden rounded-xl border border-slate-400"
                       style={{ height: previewHeight }}
                     >
                       <div
@@ -859,7 +901,7 @@ function App() {
                         className="absolute inset-0"
                         style={{
                           backgroundImage:
-                            'linear-gradient(to right, rgba(186,230,253,0.08) 1px, transparent 1px), linear-gradient(to bottom, rgba(186,230,253,0.08) 1px, transparent 1px)',
+                            'linear-gradient(to right, rgba(0,0,0,0.5) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.5) 1px, transparent 1px)',
                           backgroundSize: '32px 32px'
                         }}
                       />
@@ -1059,6 +1101,15 @@ function App() {
                   )}
                 </div>
 
+                <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                  <h3 className="mb-3 text-sm font-bold uppercase text-gray-700">Proforma de referencia (base para PDF)</h3>
+                  <div className="overflow-auto rounded-lg bg-slate-100 p-3">
+                    <div ref={proformaExportRef} className="mx-auto min-w-[760px] max-w-[760px]">
+                      <ProformaPreview logoUrl={logoUrl} data={proformaData} />
+                    </div>
+                  </div>
+                </section>
+
                 {error && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</div>
                 )}
@@ -1068,7 +1119,7 @@ function App() {
         </div>
       </main>
 
-      {!isBillingPage && (
+      {isCalculatorPage && (
         <aside className="h-screen p-4">
           <div className="flex h-full flex-col rounded-2xl border border-slate-700/70 bg-[#020817] text-white shadow-[0_16px_45px_rgba(2,6,23,0.35)]">
             <div className="border-b border-slate-700/80 p-5 pb-4">
