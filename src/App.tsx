@@ -647,7 +647,7 @@ function App() {
         className="center-scroll"
         style={{
           height: '100vh',
-          overflowY: 'auto',
+          overflowY: isCalculatorPage ? 'auto' : 'hidden',
           overflowX: 'hidden',
           display: 'flex',
           justifyContent: 'center',
@@ -682,7 +682,7 @@ function App() {
             </div>
           </header>
 
-          <div className="space-y-4 px-6 py-6">
+          <div className={isCalculatorPage ? 'space-y-4 px-6 py-6' : 'h-full overflow-y-auto space-y-4 px-6 py-6'}>
             {isBillingPage ? (
               <BillingPage logoUrl={logoUrl} />
             ) : isInventoryPage ? (
