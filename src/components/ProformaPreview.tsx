@@ -42,7 +42,7 @@ export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps)
       <div className="mb-6 flex items-start justify-between border-b-2 border-[#00011a] pb-5">
         <div>
           <div className="mb-2 flex items-center gap-2">
-            <img src={logoUrl} alt="Logo" className="h-10 w-10 rounded" />
+            <img src={logoUrl} alt="Logo" className="h-10 w-auto max-w-[220px] object-contain" />
           </div>
           <p className="font-semibold text-[#00011a]">Sistemas de Construcción Unificados S.A.</p>
           <p>Parque Empresarial del Este, San José</p>

@@ -177,10 +177,8 @@ export default function Visualizer({
            {/* Main title: Visualizador 2D (2D en negrita) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               
-              <h3 style={{ margin: 2, fontSize: 20, fontWeight: 400, color: '#0f172a', letterSpacing: '0.6px' }}>
-                <span style={{ fontWeight: 500 }}>Visualizador </span>
-                <span style={{ fontWeight: 500 }}>2D</span>
-                <span style={{ fontWeight: 500 }}> Policarbonato</span>
+              <h3 style={{ margin: 2, fontSize: 20, fontWeight: 600, color: '#0f172a', letterSpacing: '0.6px' }}>
+                VIZUALIZADOR 2D POLICARBONATO
               </h3>
             </div>
 

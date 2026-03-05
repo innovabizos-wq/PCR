@@ -397,7 +397,13 @@ function App() {
     const scopedWindow = window as Window & {
       html2canvas?: (
         element: HTMLElement,
-        options?: { useCORS?: boolean; allowTaint?: boolean; scale?: number; backgroundColor?: string }
+        options?: {
+          useCORS?: boolean;
+          allowTaint?: boolean;
+          scale?: number;
+          backgroundColor?: string;
+          foreignObjectRendering?: boolean;
+        }
       ) => Promise<HTMLCanvasElement>;
     };
     if (!scopedWindow.html2canvas) {
@@ -494,7 +500,13 @@ function App() {
     const el = customVisualizerRef.current;
     if (!el) return;
     const html2canvas = await ensureHtml2Canvas();
-    const canvas = await html2canvas(el, { useCORS: true, allowTaint: true, scale: 2 });
+    const canvas = await html2canvas(el, {
+      useCORS: true,
+      allowTaint: true,
+      scale: 2,
+      backgroundColor: '#ffffff',
+      foreignObjectRendering: true
+    });
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -853,7 +865,7 @@ function App() {
                       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#00011a] text-xs font-bold text-white">
                         3
                       </span>
-                      Vista previa y captura
+                      VIZUALIZADOR 2D POLICARBONATO
                     </h2>
                     <div className="flex items-center gap-3">
                       <img src={logoUrl} alt="Policarbonato CR" className="h-8" />
@@ -872,15 +884,15 @@ function App() {
                       <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 text-[11px] text-slate-700 md:grid-cols-4">
                         <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Ancho real</p>
-                          <p className="text-sm font-bold text-slate-900">{width.toFixed(2)} m</p>
+                          <p className="text-sm font-bold tabular-nums text-slate-900">{width.toFixed(2)} m</p>
                         </div>
                         <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Alto real</p>
-                          <p className="text-sm font-bold text-slate-900">{height.toFixed(2)} m</p>
+                          <p className="text-sm font-bold tabular-nums text-slate-900">{height.toFixed(2)} m</p>
                         </div>
                         <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Área</p>
-                          <p className="text-sm font-bold text-slate-900">{(width * height).toFixed(2)} m²</p>
+                          <p className="text-sm font-bold tabular-nums text-slate-900">{(width * height).toFixed(2)} m²</p>
                         </div>
                         <div className="rounded-lg bg-white px-2 py-1.5">
                           <p className="text-[10px] uppercase tracking-wide text-slate-500">Piezas</p>
@@ -920,10 +932,10 @@ function App() {
                         className="pointer-events-none absolute bottom-[34px] right-[56px] top-[44px] border-l border-dashed border-slate-300/60"
                       />
 
-                      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold leading-none text-white">
+                      <div className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 whitespace-nowrap rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold leading-none tabular-nums text-white">
                         Ancho · {width.toFixed(2)} m
                       </div>
-                      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold leading-none text-white">
+                      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 -rotate-90 whitespace-nowrap rounded-full bg-slate-900/70 px-3 py-1 text-[11px] font-semibold leading-none tabular-nums text-white">
                         Alto · {height.toFixed(2)} m
                       </div>
 
