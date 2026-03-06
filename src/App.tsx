@@ -512,9 +512,7 @@ function App() {
         backgroundColor: '#ffffff',
         foreignObjectRendering: false,
         scrollX: 0,
-        scrollY: 0,
-        windowWidth: el.scrollWidth,
-        windowHeight: el.scrollHeight
+        scrollY: -window.scrollY
       });
 
       const url = canvas.toDataURL('image/png');
