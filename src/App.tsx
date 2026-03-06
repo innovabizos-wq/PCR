@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Calculator,
   Camera,
@@ -9,10 +9,12 @@ import {
   LayoutDashboard,
   Leaf,
   LogOut,
+  LockKeyhole,
   Menu,
   Package,
   PanelsTopLeft,
   Save,
+  Settings,
   Share2,
   Users,
   Waves
@@ -29,10 +31,17 @@ import { calculateZacateQuote } from './utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from './utils/wpcCalculations';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
-type MainPage = 'calculator' | 'billing' | 'inventory';
+type MainPage = 'calculator' | 'billing' | 'inventory' | 'admin';
 type WpcTone = 'teca' | 'nogal' | 'grafito';
 type ZacateHeight = '35mm' | '50mm';
 type EmployeeStatus = 'activo' | 'almuerzo' | 'cafe' | 'baño' | 'logout';
+
+interface SystemUser {
+  username: string;
+  password: string;
+  role: string;
+  permissions: string;
+}
 
 declare global {
   interface Window {
@@ -111,6 +120,16 @@ const POLY_TEXTURES: Record<SheetColor, string> = {
   humo: toAssetUrl('textures/Humo.png')
 };
 
+const DEFAULT_USERS: SystemUser[] = [
+  {
+    username: 'Admin',
+    password: 'Admin',
+    role: 'Administrador',
+    permissions: 'Usuarios, Roles y Permisos'
+  }
+];
+
+
 interface MetricInputProps {
   label: string;
   value: string;
@@ -153,6 +172,12 @@ function App() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  const [users] = useState<SystemUser[]>(DEFAULT_USERS);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+
   const [polyColor, setPolyColor] = useState<SheetColor>('blanco');
   const [brand, setBrand] = useState<SheetBrand>('KLAR');
   const [thickness, setThickness] = useState<SheetThickness>('8mm');
@@ -183,6 +208,7 @@ function App() {
   const isBillingPage = activePage === 'billing';
   const isInventoryPage = activePage === 'inventory';
   const isCalculatorPage = activePage === 'calculator';
+  const isAdminPage = activePage === 'admin';
 
   useLayoutEffect(() => {
     if (!centerInnerRef.current) return;
@@ -500,6 +526,26 @@ function App() {
     if (module === 'pvc') setIncludeBorders(false);
   };
 
+  const handleLogin = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const matchedUser = users.find((user) => user.username === loginUsername && user.password === loginPassword);
+    if (!matchedUser) {
+      setLoginError('Usuario o contraseña incorrectos');
+      return;
+    }
+
+    setIsAuthenticated(true);
+    setLoginError('');
+    setActivePage('calculator');
+    setLoginPassword('');
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setLoginPassword('');
+    setLoginError('');
+  };
+
   const captureCustomVisualizer = async () => {
     const el = customVisualizerRef.current;
     if (!el) return;
@@ -555,11 +601,58 @@ function App() {
         ? `linear-gradient(160deg, ${wpcTone === 'nogal' ? '#6b4423' : wpcTone === 'grafito' ? '#4b5563' : '#b67946'}, #2f2418)`
         : `url(${POLY_TEXTURES[polyColor]})`;
 
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#050505] px-4 text-white">
+        <div className="w-full max-w-[440px] rounded-2xl border border-white/10 bg-[#0c0d10] p-8 shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+          <div className="mb-8 flex justify-center">
+            <img src={logoUrl} alt="Policarbonato CR" className="h-20" />
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Usuario</label>
+              <input
+                type="text"
+                value={loginUsername}
+                onChange={(e) => setLoginUsername(e.target.value)}
+                placeholder="Admin"
+                className="h-12 w-full rounded-lg border border-white/25 bg-transparent px-4 text-sm text-white outline-none transition focus:border-white"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Contraseña</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                placeholder="••••••••"
+                className="h-12 w-full rounded-lg border border-white/10 bg-[#14161b] px-4 text-sm text-white outline-none transition focus:border-white"
+              />
+            </div>
+
+            {loginError && <p className="text-sm font-medium text-red-500">{loginError}</p>}
+
+            <button
+              type="submit"
+              className="mt-2 flex h-12 w-full items-center justify-center rounded-lg bg-white text-sm font-bold uppercase tracking-[0.25em] text-black transition hover:bg-gray-200"
+            >
+              Ingresar
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-xs text-gray-400">Usuario por defecto: Admin · Contraseña: Admin</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isBillingPage || isInventoryPage
+        gridTemplateColumns: isBillingPage || isInventoryPage || isAdminPage
           ? `${LEFT_WIDTH}px minmax(0, 1fr)`
           : `${LEFT_WIDTH}px minmax(0, 1fr) ${RIGHT_PANEL_MAX}px`,
         height: '100vh',
@@ -604,6 +697,15 @@ function App() {
             <Package className="h-5 w-5" />
             <span className="text-sm font-medium">Inventario</span>
           </button>
+          <button
+            onClick={() => setActivePage('admin')}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+              isAdminPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Settings className="h-5 w-5" />
+            <span className="text-sm font-medium">Administración</span>
+          </button>
           <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100">
             <FileText className="h-5 w-5" />
             <span className="text-sm font-medium">Cotizaciones</span>
@@ -634,9 +736,15 @@ function App() {
             <option value="baño">Baño</option>
             <option value="logout">Logout</option>
           </select>
-          <div className="mt-2 flex items-center justify-end gap-2 text-xs text-gray-500">
+          <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500">
             <Coffee className="h-4 w-4" />
-            <LogOut className="h-4 w-4" />
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-100"
+            >
+              <LogOut className="h-4 w-4" />
+              Salir
+            </button>
           </div>
         </div>
       </aside>
@@ -673,7 +781,7 @@ function App() {
                 </button>
                 <div>
                   <h1 className="text-xl font-black uppercase text-[#00011a]">
-                    {isBillingPage ? 'Facturación y Proformas' : isInventoryPage ? 'Inventario Maestro' : 'Calculadora Pro v3.2.2'}
+                    {isBillingPage ? 'Facturación y Proformas' : isInventoryPage ? 'Inventario Maestro' : isAdminPage ? 'Panel de Administración' : 'Calculadora Pro v3.2.2'}
                   </h1>
                 </div>
               </div>
@@ -685,6 +793,46 @@ function App() {
               <BillingPage logoUrl={logoUrl} />
             ) : isInventoryPage ? (
               <InventoryPage />
+            ) : isAdminPage ? (
+              <section className="space-y-4">
+                <div className="rounded-xl border border-gray-200 bg-white p-6">
+                  <h2 className="mb-2 flex items-center gap-2 text-lg font-bold text-[#00011a]">
+                    <LockKeyhole className="h-5 w-5" />
+                    Configuración del sistema
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Administra parámetros de seguridad, usuarios, roles y permisos del sistema.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-gray-200 bg-white p-6">
+                  <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-500">Usuarios, roles y permisos</h3>
+                  <div className="overflow-hidden rounded-xl border border-gray-200">
+                    <table className="min-w-full divide-y divide-gray-200 text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-600">Usuario</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-600">Rol</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-600">Permisos</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-600">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 bg-white">
+                        {users.map((user) => (
+                          <tr key={user.username}>
+                            <td className="px-4 py-3 font-bold text-[#00011a]">{user.username}</td>
+                            <td className="px-4 py-3 text-gray-700">{user.role}</td>
+                            <td className="px-4 py-3 text-gray-700">{user.permissions}</td>
+                            <td className="px-4 py-3">
+                              <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Activo</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
             ) : (
               <>
                 <section className="rounded-xl border border-gray-200 bg-white px-6 py-4">
