@@ -1,3 +1,4 @@
+import { getCatalogPrice } from '../data/catalog';
 // src/utils/calculations.ts 
 // Motor de cálculo (versión con campos alias en inglés y español)
 // Láminas comerciales + accesorios completos
@@ -49,41 +50,41 @@ const COMMERCIAL_LENGTHS = [1.45, 2.90, 4.35, 5.80, 7.25, 8.70, 11.60];
 
 const PRICE_TABLES: Record<Brand, Record<number, number>> = {
   KLAR: {
-    1.45: 14800,
-    2.90: 29600,
-    4.35: 44400,
-    5.80: 59200,
-    7.25: 74000,
-    8.70: 88800,
-    11.60: 118400
+    1.45: getCatalogPrice('pc-klar-1.45', 14800),
+    2.90: getCatalogPrice('pc-klar-2.90', 29600),
+    4.35: getCatalogPrice('pc-klar-4.35', 44400),
+    5.80: getCatalogPrice('pc-klar-5.80', 59200),
+    7.25: getCatalogPrice('pc-klar-7.25', 74000),
+    8.70: getCatalogPrice('pc-klar-8.70', 88800),
+    11.60: getCatalogPrice('pc-klar-11.60', 118400)
   },
   PCR: {
-    1.45: 12000,
-    2.90: 24000,
-    4.35: 36000,
-    5.80: 48000,
-    7.25: 60000,
-    8.70: 72000,
-    11.60: 96000
+    1.45: getCatalogPrice('pc-pcr-1.45', 12000),
+    2.90: getCatalogPrice('pc-pcr-2.90', 24000),
+    4.35: getCatalogPrice('pc-pcr-4.35', 36000),
+    5.80: getCatalogPrice('pc-pcr-5.80', 48000),
+    7.25: getCatalogPrice('pc-pcr-7.25', 60000),
+    8.70: getCatalogPrice('pc-pcr-8.70', 72000),
+    11.60: getCatalogPrice('pc-pcr-11.60', 96000)
   }
 };
 
 const UNION_PRICE_TABLE: Record<number, number> = {
-  1.45: 2762,
-  2.90: 5524,
-  4.35: 8286,
-  5.80: 11048,
+  1.45: getCatalogPrice('pc-union-1.45', 2762),
+  2.90: getCatalogPrice('pc-union-2.90', 5524),
+  4.35: getCatalogPrice('pc-union-4.35', 8286),
+  5.80: getCatalogPrice('pc-union-5.80', 11048),
   7.25: 13810,
   8.70: 16572,
   11.60: 22096
 };
 
-const PRICE_PERFIL_U = 2654.87;
-const PRICE_CINTA_VENTILADA = 690.27;
-const PRICE_CINTA_ALUMINIO = 425;
-const PRICE_TORNILLO = 65;
-const PRICE_ARANDELA = 132.75;
-const PRICE_SILICON = 5929.21;
+const PRICE_PERFIL_U = getCatalogPrice('perfil-u', 2654.87);
+const PRICE_CINTA_VENTILADA = getCatalogPrice('cinta-ventilada', 690.27);
+const PRICE_CINTA_ALUMINIO = getCatalogPrice('cinta-aluminio', 425);
+const PRICE_TORNILLO = getCatalogPrice('tornillo', 65);
+const PRICE_ARANDELA = getCatalogPrice('arandela', 132.75);
+const PRICE_SILICON = getCatalogPrice('silicon', 5929.21);
 
 // ==============================
 // TABLA REAL DE TORNILLOS Y ARANDELAS
