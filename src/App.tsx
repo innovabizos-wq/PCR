@@ -510,7 +510,9 @@ function App() {
         allowTaint: false,
         scale: Math.max(2, window.devicePixelRatio || 1),
         backgroundColor: '#ffffff',
-        foreignObjectRendering: false
+        foreignObjectRendering: false,
+        scrollX: 0,
+        scrollY: -window.scrollY
       });
 
       const url = canvas.toDataURL('image/png');
