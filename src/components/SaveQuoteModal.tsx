@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { CalculationResult } from '../types/calculator';
-import { supabase } from '../lib/supabase';
-import { generateQuoteNumber } from '../utils/calculations';
+import { saveQuote, validateQuoteInput } from '../services/quoteService';
 
 interface SaveQuoteModalProps {
   result: CalculationResult;
@@ -28,8 +27,18 @@ export default function SaveQuoteModal({
   const [error, setError] = useState('');
 
   const handleSave = async () => {
-    if (!clientName.trim()) {
-      setError('El nombre del cliente es requerido');
+    try {
+      validateQuoteInput({
+        result,
+        sheetType,
+        sheetThickness,
+        sheetColor,
+        clientName,
+        clientEmail,
+        notes
+      });
+    } catch (validationError) {
+      setError(validationError instanceof Error ? validationError.message : 'Error de validación.');
       return;
     }
 
@@ -37,42 +46,15 @@ export default function SaveQuoteModal({
     setError('');
 
     try {
-      if (!supabase) {
-        throw new Error('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
-      }
-
-      const quoteNumber = generateQuoteNumber();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw authError;
-      }
-
-      if (!authData.user) {
-        throw new Error('Debes iniciar sesión para guardar cotizaciones.');
-      }
-
-      const { error: insertError } = await supabase.from('quotes').insert({
-        quote_number: quoteNumber,
-        client_name: clientName,
-        client_email: clientEmail,
-        width: result.width,
-        height: result.height,
-        sheet_type: sheetType,
-        sheet_thickness: sheetThickness,
-        sheet_color: sheetColor,
-        num_sheets: result.numSheets,
-        materials: result.materials,
-        subtotal: result.subtotal,
-        tax: result.tax,
-        total: result.total,
-        rounding_amount: result.roundingValue,
-        status: 'draft',
-        notes,
-        created_by: authData.user.id,
+      await saveQuote({
+        result,
+        sheetType,
+        sheetThickness,
+        sheetColor,
+        clientName,
+        clientEmail,
+        notes
       });
-
-      if (insertError) throw insertError;
 
       onSave();
     } catch (err) {
