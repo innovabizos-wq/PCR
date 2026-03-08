@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { getSupabaseOrThrow } from '../lib/supabase';
 import { CalculationResult } from '../types/calculator';
 import { generateQuoteNumber } from '../utils/calculations';
 import { CompanyId } from '../types/company';
@@ -45,9 +45,7 @@ export async function saveQuote(input: SaveQuoteInput): Promise<void> {
   validateQuoteInput(input);
   const normalized = normalizeQuoteInput(input);
 
-  if (!supabase) {
-    throw new Error('Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.');
-  }
+  const supabase = getSupabaseOrThrow();
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;

@@ -1,9 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { env, getMissingEnvMessage } from '../config/env';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+let supabaseClient: SupabaseClient | null = null;
+let supabaseInitializationError: string | null = null;
 
-export const supabase =
-  supabaseUrl && supabaseAnonKey
-    ? createClient(supabaseUrl, supabaseAnonKey)
-    : null;
+if (env.isSupabaseConfigured) {
+  supabaseClient = createClient(env.supabaseUrl, env.supabaseAnonKey);
+} else {
+  supabaseInitializationError = getMissingEnvMessage();
+  console.error(`❌ ${supabaseInitializationError}`);
+}
+
+export const supabase = supabaseClient;
+export { supabaseInitializationError };
+
+export const getSupabaseOrThrow = (): SupabaseClient => {
+  if (!supabaseClient) {
+    throw new Error(supabaseInitializationError ?? 'Supabase no está configurado.');
+  }
+  return supabaseClient;
+};
