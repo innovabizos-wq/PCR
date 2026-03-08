@@ -42,6 +42,8 @@ import {
 import { DEFAULT_COMPANY_ID } from './domain/company/company';
 import { toUserMessage } from './utils/appError';
 import { getCatalogProducts } from './services/catalogService';
+import { loadCalculatorDraft, saveCalculatorDraft } from './services/calculatorDraftService';
+import { trackEvent } from './services/telemetryService';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
 type MainPage = 'calculator' | 'billing' | 'inventory' | 'admin';
@@ -130,12 +132,13 @@ const DEFAULT_USERS: SystemUser[] = getBootstrapUsers();
 
 
 function App() {
+  const initialDraft = loadCalculatorDraft();
   const [activePage, setActivePage] = useState<MainPage>('calculator');
-  const [activeModule, setActiveModule] = useState<MaterialModule>('pvc');
-  const [widthInput, setWidthInput] = useState('0');
-  const [heightInput, setHeightInput] = useState('0');
-  const [result, setResult] = useState<CalculationResult | null>(null);
-  const [editedMaterials, setEditedMaterials] = useState<Material[] | null>(null);
+  const [activeModule, setActiveModule] = useState<MaterialModule>(initialDraft?.activeModule ?? 'pvc');
+  const [widthInput, setWidthInput] = useState(initialDraft?.widthInput ?? '0');
+  const [heightInput, setHeightInput] = useState(initialDraft?.heightInput ?? '0');
+  const [result, setResult] = useState<CalculationResult | null>(initialDraft?.result ?? null);
+  const [editedMaterials, setEditedMaterials] = useState<Material[] | null>(initialDraft?.editedMaterials ?? null);
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [billingDraft, setBillingDraft] = useState<{
@@ -153,20 +156,20 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const [polyColor, setPolyColor] = useState<SheetColor>('blanco');
+  const [polyColor, setPolyColor] = useState<SheetColor>((initialDraft?.polyColor as SheetColor) ?? 'blanco');
   const [polyTextures, setPolyTextures] = useState<Record<SheetColor, string>>(DEFAULT_POLY_TEXTURES);
-  const [brand, setBrand] = useState<SheetBrand>('KLAR');
-  const [thickness, setThickness] = useState<SheetThickness>('8mm');
+  const [brand, setBrand] = useState<SheetBrand>((initialDraft?.brand as SheetBrand) ?? 'KLAR');
+  const [thickness, setThickness] = useState<SheetThickness>((initialDraft?.thickness as SheetThickness) ?? '8mm');
 
-  const [pvcColor, setPvcColor] = useState<PvcColor>('rojo');
-  const [includeBorders, setIncludeBorders] = useState(false);
+  const [pvcColor, setPvcColor] = useState<PvcColor>((initialDraft?.pvcColor as PvcColor) ?? 'rojo');
+  const [includeBorders, setIncludeBorders] = useState(initialDraft?.includeBorders ?? false);
 
-  const [wpcType, setWpcType] = useState<WpcPanelType>('interior');
-  const [wpcUseRecuts, setWpcUseRecuts] = useState(true);
-  const [wpcVerticalInstall, setWpcVerticalInstall] = useState(true);
-  const [wpcTone, setWpcTone] = useState<WpcTone>('teca');
+  const [wpcType, setWpcType] = useState<WpcPanelType>((initialDraft?.wpcType as WpcPanelType) ?? 'interior');
+  const [wpcUseRecuts, setWpcUseRecuts] = useState(initialDraft?.wpcUseRecuts ?? true);
+  const [wpcVerticalInstall, setWpcVerticalInstall] = useState(initialDraft?.wpcVerticalInstall ?? true);
+  const [wpcTone, setWpcTone] = useState<WpcTone>((initialDraft?.wpcTone as WpcTone) ?? 'teca');
 
-  const [zacateHeight, setZacateHeight] = useState<ZacateHeight>('35mm');
+  const [zacateHeight, setZacateHeight] = useState<ZacateHeight>((initialDraft?.zacateHeight as ZacateHeight) ?? '35mm');
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>('activo');
 
   const centerInnerRef = useRef<HTMLDivElement | null>(null);
@@ -198,6 +201,10 @@ function App() {
       console.warn('No se pudo precargar catálogo versionado.', err);
     });
   }, []);
+
+  useEffect(() => {
+    trackEvent('page.view', { page: activePage, module: activeModule });
+  }, [activeModule, activePage]);
 
   useLayoutEffect(() => {
     if (!centerInnerRef.current) return;
@@ -324,6 +331,42 @@ function App() {
     wpcVerticalInstall,
     wpcTone,
     zacateHeight
+  ]);
+
+  useEffect(() => {
+    saveCalculatorDraft({
+      activeModule,
+      widthInput,
+      heightInput,
+      includeBorders,
+      brand,
+      thickness,
+      polyColor,
+      pvcColor,
+      wpcType,
+      wpcUseRecuts,
+      wpcVerticalInstall,
+      wpcTone,
+      zacateHeight,
+      result,
+      editedMaterials
+    });
+  }, [
+    activeModule,
+    widthInput,
+    heightInput,
+    includeBorders,
+    brand,
+    thickness,
+    polyColor,
+    pvcColor,
+    wpcType,
+    wpcUseRecuts,
+    wpcVerticalInstall,
+    wpcTone,
+    zacateHeight,
+    result,
+    editedMaterials
   ]);
 
   // ✅ versión corta (main)
@@ -498,6 +541,7 @@ function App() {
   const exportPDF = async () => {
     if (!result || !proformaExportRef.current) return;
     try {
+      await trackEvent('quote.export_pdf.started', { module: activeModule, page: activePage });
       const quoteNumber = await generateAndStoreQuoteNumber({
         result,
         materials: displayMaterials,
@@ -535,10 +579,20 @@ function App() {
       pdf.addImage(imageData, 'PNG', marginX, marginY, imageWidth, imageHeight, undefined, 'FAST');
 
       pdf.save(`cotizacion_${quoteNumber}.pdf`);
+      await trackEvent('quote.export_pdf.completed', {
+        module: activeModule,
+        page: activePage,
+        metadata: { quoteNumber }
+      });
     } catch (err) {
       const msg = toUserMessage(err, 'No se pudo exportar el PDF');
       setError(msg);
       pushToast('error', msg);
+      await trackEvent('quote.export_pdf.failed', {
+        module: activeModule,
+        page: activePage,
+        metadata: { message: msg }
+      });
     }
   };
 
@@ -556,6 +610,7 @@ function App() {
     setEditedMaterials(null);
     setError('');
     if (module === 'pvc') setIncludeBorders(false);
+    trackEvent('calculator.module_change', { module, page: activePage });
   };
 
   const handleLogin = (event: FormEvent<HTMLFormElement>) => {
