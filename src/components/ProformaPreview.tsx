@@ -1,3 +1,4 @@
+import { calculateProformaTotals } from '../domain/quotes/proformaTotals';
 import { formatCurrency } from '../utils/calculations';
 
 export interface ProformaLine {
@@ -28,14 +29,7 @@ interface ProformaPreviewProps {
 }
 
 export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps) {
-  const subtotal = data.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0);
-  const discountTotal = data.lines.reduce(
-    (sum, line) => sum + line.quantity * line.unitPrice * ((line.discountPct ?? 0) / 100),
-    0
-  );
-  const netSubtotal = subtotal - discountTotal;
-  const iva = netSubtotal * 0.13;
-  const total = netSubtotal + iva;
+  const { subtotal, discountTotal, netSubtotal, iva, total } = calculateProformaTotals(data.lines);
 
   return (
     <div className="w-full max-w-[760px] rounded-xl border border-slate-200 bg-white p-8 text-[11px] text-slate-700 shadow-xl">

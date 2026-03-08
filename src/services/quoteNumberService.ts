@@ -1,31 +1,28 @@
 import { supabase } from '../lib/supabase';
 import { CalculationResult, Material } from '../types/calculator';
 import { CompanyId } from '../types/company';
-
-export type QuoteCategory = 'policarbonato' | 'wpc' | 'zacate';
-
-const QUOTE_PREFIX: Record<QuoteCategory, string> = {
-  policarbonato: 'P',
-  wpc: 'W',
-  zacate: 'Z'
-};
+import { getQuoteCounterScope, mapCategoryFromSheetType, nextQuoteConsecutive, QuoteCategory } from '../domain/quotes/quoteNumbering';
 
 const FALLBACK_COUNTER_KEY = 'pcr_quote_counter';
 
-const mapCategoryFromSheetType = (sheetType: string): QuoteCategory => {
-  if (sheetType === 'wpc') return 'wpc';
-  if (sheetType === 'zacate') return 'zacate';
-  return 'policarbonato';
+const readLocalCounterMap = (): Record<string, number> => {
+  if (typeof localStorage === 'undefined') return {};
+  const raw = localStorage.getItem(FALLBACK_COUNTER_KEY);
+  return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+};
+
+const writeLocalCounterMap = (counterMap: Record<string, number>): void => {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(FALLBACK_COUNTER_KEY, JSON.stringify(counterMap));
 };
 
 const getFallbackConsecutive = (category: QuoteCategory, companyId: CompanyId): string => {
-  const raw = localStorage.getItem(FALLBACK_COUNTER_KEY);
-  const data = raw ? (JSON.parse(raw) as Record<string, number>) : {};
-  const key = `${companyId}:${category}`;
-  const next = (data[key] ?? 0) + 1;
-  data[key] = next;
-  localStorage.setItem(FALLBACK_COUNTER_KEY, JSON.stringify(data));
-  return `${QUOTE_PREFIX[category]}-${String(next).padStart(4, '0')}`;
+  const data = readLocalCounterMap();
+  const key = getQuoteCounterScope(category, companyId);
+  const current = data[key] ?? 0;
+  data[key] = current + 1;
+  writeLocalCounterMap(data);
+  return nextQuoteConsecutive(current, category);
 };
 
 interface RegisterQuoteInput {

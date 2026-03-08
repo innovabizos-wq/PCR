@@ -1,4 +1,4 @@
-import { Session } from '@supabase/supabase-js';
+import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getSupabaseOrThrow, supabase } from '../../lib/supabase';
 import { AuthenticatedUser, UserRole } from '../../domain/auth/permissions';
 
@@ -43,15 +43,14 @@ const resolveAuthFromDatabase = async (userId: string): Promise<Pick<Authenticat
     supabase.from('user_company_access').select('company_id').eq('user_id', userId)
   ]);
 
-  if (profileError || accessError) {
-    console.warn('No se pudo resolver perfil/acceso desde tablas auxiliares, usando metadata JWT.', {
+  if (profileError || accessError || !profileData) {
+    console.warn('No se pudo resolver perfil/acceso desde tablas auxiliares.', {
       profileError,
-      accessError
+      accessError,
+      profileData
     });
     return null;
   }
-
-  if (!profileData) return null;
 
   return {
     role: normalizeRole(profileData.role),
@@ -59,18 +58,45 @@ const resolveAuthFromDatabase = async (userId: string): Promise<Pick<Authenticat
   };
 };
 
+const isCompanyAccessInvalid = (role: UserRole, companyIds: string[]): boolean => role !== 'super_admin' && companyIds.length === 0;
+
 const mapSessionUser = async (session: Session | null): Promise<AuthenticatedUser | null> => {
-  if (!session?.user.email) return null;
+  if (!session?.user?.id || !session.user.email) return null;
 
   const dbAuth = await resolveAuthFromDatabase(session.user.id);
+  if (!dbAuth) return null;
+
   const metadataAuth = readMetadataAuth(session);
+  const role = dbAuth.role ?? metadataAuth.role;
+  const companyIds = dbAuth.companyIds.length ? dbAuth.companyIds : metadataAuth.companyIds;
+
+  if (isCompanyAccessInvalid(role, companyIds)) {
+    console.warn('Sesión inválida por falta de acceso por empresa.', { userId: session.user.id, role });
+    return null;
+  }
 
   return {
     id: session.user.id,
     email: session.user.email,
-    role: dbAuth?.role ?? metadataAuth.role,
-    companyIds: dbAuth?.companyIds.length ? dbAuth.companyIds : metadataAuth.companyIds
+    role,
+    companyIds
   };
+};
+
+const clearSupabaseSession = async (): Promise<void> => {
+  if (!supabase) return;
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    console.warn('No se pudo limpiar la sesión inválida de Supabase.', error);
+  }
+};
+
+const resolveUserFromSession = async (session: Session | null): Promise<AuthenticatedUser | null> => {
+  const mapped = await mapSessionUser(session);
+  if (session && !mapped) {
+    await clearSupabaseSession();
+  }
+  return mapped;
 };
 
 export const signIn = async (email: string, password: string): Promise<AuthenticatedUser> => {
@@ -78,7 +104,7 @@ export const signIn = async (email: string, password: string): Promise<Authentic
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
 
-  const mapped = await mapSessionUser(data.session);
+  const mapped = await resolveUserFromSession(data.session);
   if (!mapped) throw new Error('No fue posible resolver la sesión del usuario.');
   return mapped;
 };
@@ -93,11 +119,32 @@ export const getCurrentSessionUser = async (): Promise<AuthenticatedUser | null>
   if (!supabase) return null;
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
-  return mapSessionUser(data.session);
+  return resolveUserFromSession(data.session);
 };
 
-export const onAuthStateChanged = (cb: (user: AuthenticatedUser | null) => void): (() => void) => {
+export const onAuthStateChanged = (
+  cb: (user: AuthenticatedUser | null) => void,
+  onError?: (error: unknown) => void
+): (() => void) => {
   if (!supabase) return () => {};
-  const { data } = supabase.auth.onAuthStateChange(async (_event, session) => cb(await mapSessionUser(session)));
+
+  const handler = async (event: AuthChangeEvent, session: Session | null) => {
+    if (event === 'SIGNED_OUT' || !session) {
+      cb(null);
+      return;
+    }
+
+    try {
+      cb(await resolveUserFromSession(session));
+    } catch (error) {
+      onError?.(error);
+      cb(null);
+    }
+  };
+
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    void handler(event, session);
+  });
+
   return () => data.subscription.unsubscribe();
 };
