@@ -13,14 +13,12 @@ import {
   Menu,
   Package,
   PanelsTopLeft,
-  Save,
   Settings,
   Share2,
   Users,
   Waves
 } from 'lucide-react';
 import MaterialsTable from './components/MaterialsTable';
-import SaveQuoteModal from './components/SaveQuoteModal';
 import BillingPage from './components/BillingPage';
 import InventoryPage from './components/InventoryPage';
 import ProformaPreview, { ProformaData } from './components/ProformaPreview';
@@ -29,6 +27,8 @@ import { calculateQuote, formatCurrency } from './utils/calculations';
 import { calculatePvcQuote, pvcPalette, PvcColor } from './utils/pvcCalculations';
 import { calculateZacateQuote } from './utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from './utils/wpcCalculations';
+import { generateAndStoreQuoteNumber } from './services/quoteNumberService';
+import { getInventoryProducts } from './services/inventoryService';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
 type MainPage = 'calculator' | 'billing' | 'inventory' | 'admin';
@@ -111,7 +111,7 @@ const STATUS_META: Record<EmployeeStatus, { label: string; tone: string }> = {
 
 const toAssetUrl = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
 
-const POLY_TEXTURES: Record<SheetColor, string> = {
+const DEFAULT_POLY_TEXTURES: Record<SheetColor, string> = {
   transparente: toAssetUrl('textures/transparente.png'),
   bronce: toAssetUrl('textures/BRONCE.png'),
   azul: toAssetUrl('textures/azul.png'),
@@ -169,7 +169,13 @@ function App() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [editedMaterials, setEditedMaterials] = useState<Material[] | null>(null);
   const [error, setError] = useState('');
-  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [billingDraft, setBillingDraft] = useState<{
+    category: 'policarbonato' | 'pvc' | 'wpc' | 'zacate';
+    width: number;
+    height: number;
+    materials: Material[];
+    quoteNumber?: string;
+  } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [users] = useState<SystemUser[]>(DEFAULT_USERS);
@@ -179,6 +185,7 @@ function App() {
   const [loginError, setLoginError] = useState('');
 
   const [polyColor, setPolyColor] = useState<SheetColor>('blanco');
+  const [polyTextures, setPolyTextures] = useState<Record<SheetColor, string>>(DEFAULT_POLY_TEXTURES);
   const [brand, setBrand] = useState<SheetBrand>('KLAR');
   const [thickness, setThickness] = useState<SheetThickness>('8mm');
 
@@ -291,6 +298,30 @@ function App() {
       setResult(null);
     }
   };
+
+
+  useEffect(() => {
+    const loadTextures = async () => {
+      try {
+        const inventory = await getInventoryProducts();
+        const textureRows = inventory.filter((item) => item.categoria === 'textura');
+        if (!textureRows.length) return;
+
+        const nextTextures = { ...DEFAULT_POLY_TEXTURES };
+        for (const row of textureRows) {
+          const key = row.sku.toLowerCase();
+          if ((key === 'transparente' || key === 'bronce' || key === 'azul' || key === 'gris' || key === 'blanco' || key === 'humo') && row.estiloFoto) {
+            nextTextures[key as SheetColor] = row.estiloFoto;
+          }
+        }
+        setPolyTextures(nextTextures);
+      } catch {
+        // fallback silencioso a texturas locales
+      }
+    };
+
+    loadTextures();
+  }, []);
 
   useEffect(() => {
     calculateResults();
@@ -483,6 +514,21 @@ function App() {
   const exportPDF = async () => {
     if (!result || !proformaExportRef.current) return;
     try {
+      const quoteNumber = await generateAndStoreQuoteNumber({
+        result,
+        materials: displayMaterials,
+        sheetType: resolvedSheetType,
+        sheetThickness: resolvedSheetThickness,
+        sheetColor: resolvedSheetColor
+      });
+      setBillingDraft({
+        category: isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'policarbonato',
+        width: result.width,
+        height: result.height,
+        materials: displayMaterials,
+        quoteNumber
+      });
+
       const html2canvas = await ensureHtml2Canvas();
       const jsPDF = await ensureJsPdf();
 
@@ -503,8 +549,7 @@ function App() {
       const marginY = 8;
       pdf.addImage(imageData, 'PNG', marginX, marginY, imageWidth, imageHeight, undefined, 'FAST');
 
-      const moduleLabel = isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'policarbonato';
-      pdf.save(`cotizacion_${moduleLabel}_${Date.now()}.pdf`);
+      pdf.save(`cotizacion_${quoteNumber}.pdf`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo exportar el PDF');
     }
@@ -599,7 +644,7 @@ function App() {
         url('${toAssetUrl('textures/zacate-grass.svg')}')`
       : isWpc
         ? `linear-gradient(160deg, ${wpcTone === 'nogal' ? '#6b4423' : wpcTone === 'grafito' ? '#4b5563' : '#b67946'}, #2f2418)`
-        : `url(${POLY_TEXTURES[polyColor]})`;
+        : `url(${polyTextures[polyColor]})`;
 
   if (!isAuthenticated) {
     return (
@@ -790,7 +835,7 @@ function App() {
 
           <div className={isCalculatorPage ? 'space-y-4 px-6 py-6' : 'h-full overflow-y-auto space-y-4 px-6 py-6'}>
             {isBillingPage ? (
-              <BillingPage logoUrl={logoUrl} />
+              <BillingPage logoUrl={logoUrl} initialQuote={billingDraft} />
             ) : isInventoryPage ? (
               <InventoryPage />
             ) : isAdminPage ? (
@@ -1126,7 +1171,7 @@ function App() {
                               <div
                                 className="absolute inset-0"
                                 style={{
-                                  backgroundImage: `url(${POLY_TEXTURES[polyColor]})`,
+                                  backgroundImage: `url(${polyTextures[polyColor]})`,
                                   backgroundSize: 'cover',
                                   backgroundPosition: 'center',
                                   opacity: 0.96
@@ -1316,10 +1361,20 @@ function App() {
                 </div>
 
                 <button
-                  onClick={() => setShowSaveModal(true)}
+                  onClick={() => {
+                    if (!result) return;
+                    setBillingDraft({
+                      category: isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'policarbonato',
+                      width: result.width,
+                      height: result.height,
+                      materials: displayMaterials,
+                      quoteNumber: undefined
+                    });
+                    setActivePage('billing');
+                  }}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 text-sm font-bold uppercase tracking-wider text-white hover:bg-cyan-600"
                 >
-                  <Save className="h-5 w-5" />
+                  <FileText className="h-5 w-5" />
                   Generar cotización
                 </button>
 
@@ -1342,20 +1397,6 @@ function App() {
             </div>
           </div>
         </aside>
-      )}
-
-      {showSaveModal && result && (
-        <SaveQuoteModal
-          result={result}
-          sheetType={resolvedSheetType}
-          sheetThickness={resolvedSheetThickness}
-          sheetColor={resolvedSheetColor}
-          onClose={() => setShowSaveModal(false)}
-          onSave={() => {
-            setShowSaveModal(false);
-            alert('Cotización guardada exitosamente');
-          }}
-        />
       )}
     </div>
   );

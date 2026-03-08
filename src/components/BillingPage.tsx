@@ -2,15 +2,48 @@ import { useMemo, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import ProformaPreview, { ProformaData } from './ProformaPreview';
 import { catalogProducts } from '../data/catalog';
+import { Material } from '../types/calculator';
 
 interface BillingPageProps {
   logoUrl: string;
+  initialQuote?: {
+    category: BillingProduct;
+    width: number;
+    height: number;
+    materials: Material[];
+    quoteNumber?: string;
+  } | null;
 }
 
 type BillingProduct = 'policarbonato' | 'pvc' | 'wpc' | 'zacate';
 
-const buildProforma = (product: BillingProduct): ProformaData => {
+const buildProforma = (product: BillingProduct, initialQuote?: BillingPageProps['initialQuote']): ProformaData => {
   const mainItem = catalogProducts.find((item) => item.categoria === product) ?? catalogProducts[0];
+
+  if (initialQuote && initialQuote.materials.length) {
+    return {
+      quoteNumber: initialQuote.quoteNumber ?? `PF-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+      date: new Date().toLocaleDateString('es-CR'),
+      clientName: 'Cliente de mostrador',
+      clientId: 'N/D',
+      clientAddress: 'Pendiente',
+      phone: 'Pendiente',
+      deliveryNote: `${product.toUpperCase()} · ${initialQuote.width.toFixed(2)}m x ${initialQuote.height.toFixed(2)}m`,
+      lines: initialQuote.materials.map((line, index) => ({
+        id: line.id || `line-${index}`,
+        description: line.name,
+        details: line.description,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        discountPct: 0
+      })),
+      bankAccounts: [
+        { label: 'Banco Nacional', value: '100-01-123-456789' },
+        { label: 'SINPE', value: '+506 8888-8888' }
+      ],
+      warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.'
+    };
+  }
 
   return {
     quoteNumber: `PF-2026-${product.slice(0, 3).toUpperCase()}01`,
@@ -38,9 +71,9 @@ const buildProforma = (product: BillingProduct): ProformaData => {
   };
 };
 
-export default function BillingPage({ logoUrl }: BillingPageProps) {
-  const [selectedProduct, setSelectedProduct] = useState<BillingProduct>('policarbonato');
-  const selectedProforma = useMemo(() => buildProforma(selectedProduct), [selectedProduct]);
+export default function BillingPage({ logoUrl, initialQuote }: BillingPageProps) {
+  const [selectedProduct, setSelectedProduct] = useState<BillingProduct>(initialQuote?.category ?? 'policarbonato');
+  const selectedProforma = useMemo(() => buildProforma(selectedProduct, initialQuote), [selectedProduct, initialQuote]);
 
   return (
     <div className="space-y-4 px-6 py-6">

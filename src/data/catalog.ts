@@ -1,4 +1,4 @@
-export type CatalogCategory = 'policarbonato' | 'pvc' | 'wpc' | 'zacate' | 'accesorio';
+export type CatalogCategory = 'policarbonato' | 'pvc' | 'wpc' | 'zacate' | 'accesorio' | 'textura';
 
 export interface CatalogProduct {
   id: string;
