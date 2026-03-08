@@ -29,6 +29,12 @@ export default function LoginScreen({ logoUrl }: LoginScreenProps) {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          <div className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 p-3 text-xs text-cyan-100">
+            <p className="font-semibold uppercase tracking-[0.15em]">Acceso inicial</p>
+            <p className="mt-1">Correo: <span className="font-bold">prueba@correo.com</span></p>
+            <p>Contraseña: <span className="font-bold">Prueba1234</span></p>
+          </div>
+
           <div>
             <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">Correo</label>
             <input

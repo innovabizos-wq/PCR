@@ -1,6 +1,7 @@
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../../lib/supabase';
 import { AuthenticatedUser, UserRole } from '../../domain/auth/permissions';
+import { clearLocalSession, findLocalUserByCredentials, getStoredLocalSession, storeLocalSession } from './localUserStore';
 
 const normalizeRole = (value: unknown): UserRole => {
   if (value === 'super_admin' || value === 'admin_empresa' || value === 'ventas' || value === 'inventario' || value === 'consulta') {
@@ -34,7 +35,18 @@ const mapSessionUser = (session: Session | null): AuthenticatedUser | null => {
 };
 
 export const signIn = async (email: string, password: string): Promise<AuthenticatedUser> => {
-  if (!supabase) throw new Error('Supabase no está configurado.');
+  const localUser = findLocalUserByCredentials(email, password);
+  if (localUser) {
+    storeLocalSession(localUser);
+    return {
+      id: localUser.id,
+      email: localUser.email,
+      role: localUser.role,
+      companyIds: localUser.companyIds
+    };
+  }
+
+  if (!supabase) throw new Error('Supabase no está configurado y las credenciales no son locales.');
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
@@ -45,12 +57,15 @@ export const signIn = async (email: string, password: string): Promise<Authentic
 };
 
 export const signOut = async (): Promise<void> => {
-  if (!supabase) throw new Error('Supabase no está configurado.');
+  clearLocalSession();
+  if (!supabase) return;
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 };
 
 export const getCurrentSessionUser = async (): Promise<AuthenticatedUser | null> => {
+  const localSession = getStoredLocalSession();
+  if (localSession) return localSession;
   if (!supabase) return null;
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;

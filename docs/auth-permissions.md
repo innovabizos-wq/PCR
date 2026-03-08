@@ -1,7 +1,8 @@
 # Auth y permisos
 
 - Supabase Auth reemplaza completamente login fake/local.
-- No hay credenciales hardcodeadas en el repositorio; el acceso depende de usuarios existentes en Supabase Auth.
+- Hay un usuario bootstrap local para acceso inicial/offline: `prueba@correo.com` / `Prueba1234` con rol `super_admin`.
+- Además del flujo Supabase Auth, existe fallback local en `localStorage` para crear y autenticar usuarios desde el panel de administración.
 - Roles base: `super_admin`, `admin_empresa`, `ventas`, `inventario`, `consulta`.
 - Acciones base: `ver`, `crear`, `editar`, `eliminar`, `exportar`, `aprobar`, `administrar`.
 - Matriz de permisos central en `src/domain/auth/permissions.ts`.
