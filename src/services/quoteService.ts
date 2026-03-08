@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { CalculationResult } from '../types/calculator';
 import { generateQuoteNumber } from '../utils/calculations';
+import { CompanyId } from '../types/company';
+import { DEFAULT_COMPANY_ID } from '../domain/company/company';
 
 export interface SaveQuoteInput {
   result: CalculationResult;
@@ -10,6 +12,7 @@ export interface SaveQuoteInput {
   clientName: string;
   clientEmail?: string;
   notes?: string;
+  companyId?: CompanyId;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,7 +59,8 @@ export async function saveQuote(input: SaveQuoteInput): Promise<void> {
     rounding_amount: input.result.roundingValue,
     status: 'draft',
     notes: (input.notes ?? '').trim(),
-    created_by: authData.user.id
+    created_by: authData.user.id,
+    company_id: input.companyId ?? DEFAULT_COMPANY_ID
   });
 
   if (insertError) throw insertError;

@@ -29,19 +29,21 @@ import { calculateZacateQuote } from './utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from './utils/wpcCalculations';
 import { generateAndStoreQuoteNumber } from './services/quoteNumberService';
 import { getInventoryProducts } from './services/inventoryService';
+import {
+  authenticateUser,
+  clearPersistedSession,
+  getBootstrapUsers,
+  hasPersistedSession,
+  persistAuthSession,
+  SystemUser
+} from './features/auth/authService';
+import { DEFAULT_COMPANY_ID } from './domain/company/company';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
 type MainPage = 'calculator' | 'billing' | 'inventory' | 'admin';
 type WpcTone = 'teca' | 'nogal' | 'grafito';
 type ZacateHeight = '35mm' | '50mm';
 type EmployeeStatus = 'activo' | 'almuerzo' | 'cafe' | 'baño' | 'logout';
-
-interface SystemUser {
-  username: string;
-  password: string;
-  role: string;
-  permissions: string;
-}
 
 declare global {
   interface Window {
@@ -120,14 +122,7 @@ const DEFAULT_POLY_TEXTURES: Record<SheetColor, string> = {
   humo: toAssetUrl('textures/Humo.png')
 };
 
-const DEFAULT_USERS: SystemUser[] = [
-  {
-    username: 'Admin',
-    password: 'Admin',
-    role: 'Administrador',
-    permissions: 'Usuarios, Roles y Permisos'
-  }
-];
+const DEFAULT_USERS: SystemUser[] = getBootstrapUsers();
 
 
 interface MetricInputProps {
@@ -179,7 +174,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [users] = useState<SystemUser[]>(DEFAULT_USERS);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => hasPersistedSession());
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -519,7 +514,8 @@ function App() {
         materials: displayMaterials,
         sheetType: resolvedSheetType,
         sheetThickness: resolvedSheetThickness,
-        sheetColor: resolvedSheetColor
+        sheetColor: resolvedSheetColor,
+        companyId: DEFAULT_COMPANY_ID
       });
       setBillingDraft({
         category: isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'policarbonato',
@@ -573,12 +569,13 @@ function App() {
 
   const handleLogin = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const matchedUser = users.find((user) => user.username === loginUsername && user.password === loginPassword);
+    const matchedUser = authenticateUser(users, loginUsername, loginPassword);
     if (!matchedUser) {
       setLoginError('Usuario o contraseña incorrectos');
       return;
     }
 
+    persistAuthSession(matchedUser);
     setIsAuthenticated(true);
     setLoginError('');
     setActivePage('calculator');
@@ -586,6 +583,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    clearPersistedSession();
     setIsAuthenticated(false);
     setLoginPassword('');
     setLoginError('');
