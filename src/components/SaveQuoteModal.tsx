@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { CalculationResult } from '../types/calculator';
 import { saveQuote, validateQuoteInput } from '../services/quoteService';
 import { toUserMessage } from '../utils/appError';
+import { useCompany } from '../features/company/CompanyContext';
 
 interface SaveQuoteModalProps {
   result: CalculationResult;
@@ -21,6 +22,7 @@ export default function SaveQuoteModal({
   onClose,
   onSave
 }: SaveQuoteModalProps) {
+  const { activeCompanyId } = useCompany();
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [notes, setNotes] = useState('');
@@ -36,7 +38,8 @@ export default function SaveQuoteModal({
         sheetColor,
         clientName,
         clientEmail,
-        notes
+        notes,
+        companyId: activeCompanyId as 'oz' | 'pt' | 'ds'
       });
     } catch (validationError) {
       setError(toUserMessage(validationError, 'Error de validación.'));
@@ -54,7 +57,8 @@ export default function SaveQuoteModal({
         sheetColor,
         clientName,
         clientEmail,
-        notes
+        notes,
+        companyId: activeCompanyId as 'oz' | 'pt' | 'ds'
       });
 
       onSave();

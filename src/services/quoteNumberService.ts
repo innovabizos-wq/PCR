@@ -1,7 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { CalculationResult, Material } from '../types/calculator';
 import { CompanyId } from '../types/company';
-import { DEFAULT_COMPANY_ID } from '../domain/company/company';
 
 export type QuoteCategory = 'policarbonato' | 'wpc' | 'zacate';
 
@@ -12,7 +11,6 @@ const QUOTE_PREFIX: Record<QuoteCategory, string> = {
 };
 
 const FALLBACK_COUNTER_KEY = 'pcr_quote_counter';
-const FALLBACK_COMPANY_KEY = 'pcr_company_id';
 
 const mapCategoryFromSheetType = (sheetType: string): QuoteCategory => {
   if (sheetType === 'wpc') return 'wpc';
@@ -20,18 +18,12 @@ const mapCategoryFromSheetType = (sheetType: string): QuoteCategory => {
   return 'policarbonato';
 };
 
-const getSelectedCompanyId = (companyId?: CompanyId): CompanyId => {
-  if (companyId) return companyId;
-  const stored = localStorage.getItem(FALLBACK_COMPANY_KEY);
-  if (stored === 'oz' || stored === 'pt' || stored === 'ds') return stored;
-  return DEFAULT_COMPANY_ID;
-};
-
-const getFallbackConsecutive = (category: QuoteCategory): string => {
+const getFallbackConsecutive = (category: QuoteCategory, companyId: CompanyId): string => {
   const raw = localStorage.getItem(FALLBACK_COUNTER_KEY);
-  const data = raw ? (JSON.parse(raw) as Record<QuoteCategory, number>) : { policarbonato: 0, wpc: 0, zacate: 0 };
-  const next = (data[category] ?? 0) + 1;
-  data[category] = next;
+  const data = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  const key = `${companyId}:${category}`;
+  const next = (data[key] ?? 0) + 1;
+  data[key] = next;
   localStorage.setItem(FALLBACK_COUNTER_KEY, JSON.stringify(data));
   return `${QUOTE_PREFIX[category]}-${String(next).padStart(4, '0')}`;
 };
@@ -42,27 +34,27 @@ interface RegisterQuoteInput {
   sheetType: string;
   sheetThickness: string;
   sheetColor: string;
-  companyId?: CompanyId;
+  companyId: CompanyId;
 }
 
 export async function generateAndStoreQuoteNumber(input: RegisterQuoteInput): Promise<string> {
   const category = mapCategoryFromSheetType(input.sheetType);
-  const companyId = getSelectedCompanyId(input.companyId);
 
   if (!supabase) {
-    return `${companyId}-${getFallbackConsecutive(category)}`;
+    return `${input.companyId}-${getFallbackConsecutive(category, input.companyId)}`;
   }
 
   const { data, error } = await supabase.rpc('next_quote_number', {
-    p_category: category
+    p_category: category,
+    p_company_id: input.companyId
   });
 
   if (error || !data || typeof data !== 'string') {
     console.warn('No se pudo usar RPC next_quote_number, usando fallback local.', error);
-    return `${companyId}-${getFallbackConsecutive(category)}`;
+    return `${input.companyId}-${getFallbackConsecutive(category, input.companyId)}`;
   }
 
-  const quoteNumber = `${companyId}-${data}`;
+  const quoteNumber = `${input.companyId}-${data}`;
 
   const { error: insertError } = await supabase.from('quotes').insert({
     quote_number: quoteNumber,
@@ -79,9 +71,9 @@ export async function generateAndStoreQuoteNumber(input: RegisterQuoteInput): Pr
     tax: input.result.tax,
     total: input.result.total,
     rounding_amount: input.result.roundingValue,
-    status: 'pdf_generado',
+    status: 'issued',
     notes: `Cotización PDF descargada - categoría ${category}`,
-    company_id: companyId
+    company_id: input.companyId
   });
 
   if (insertError) {

@@ -1,49 +1,64 @@
-import { env } from '../../config/env';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
+import { AuthenticatedUser, UserRole } from '../../domain/auth/permissions';
 
-export interface SystemUser {
-  username: string;
-  password: string;
-  role: string;
-  permissions: string;
-}
-
-const SESSION_KEY = 'pcr_auth_session_v1';
-
-const createDevFallbackPassword = (): string => {
-  return 'Admin';
-};
-
-const defaultUser: SystemUser = {
-  username: env.defaultUsername ?? 'Admin',
-  password: env.defaultPassword ?? createDevFallbackPassword(),
-  role: 'Administrador',
-  permissions: 'Usuarios, Roles y Permisos'
-};
-
-export const getBootstrapUsers = (): SystemUser[] => [defaultUser];
-
-export const authenticateUser = (users: SystemUser[], username: string, password: string): SystemUser | null => {
-  const normalizedUsername = username.trim().toLowerCase();
-  return users.find((user) => user.username.toLowerCase() === normalizedUsername && user.password === password) ?? null;
-};
-
-export const persistAuthSession = (user: SystemUser): void => {
-  const payload = { username: user.username, role: user.role, at: Date.now() };
-  localStorage.setItem(SESSION_KEY, JSON.stringify(payload));
-};
-
-export const hasPersistedSession = (): boolean => {
-  const raw = localStorage.getItem(SESSION_KEY);
-  if (!raw) return false;
-  try {
-    const parsed = JSON.parse(raw) as { username?: string };
-    return Boolean(parsed.username);
-  } catch {
-    localStorage.removeItem(SESSION_KEY);
-    return false;
+const normalizeRole = (value: unknown): UserRole => {
+  if (value === 'super_admin' || value === 'admin_empresa' || value === 'ventas' || value === 'inventario' || value === 'consulta') {
+    return value;
   }
+  return 'consulta';
 };
 
-export const clearPersistedSession = (): void => {
-  localStorage.removeItem(SESSION_KEY);
+const normalizeCompanyIds = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+  }
+  if (typeof value === 'string' && value.length > 0) return [value];
+  return [];
+};
+
+const mapSessionUser = (session: Session | null): AuthenticatedUser | null => {
+  if (!session?.user.email) return null;
+  const metadata = session.user.app_metadata ?? {};
+  const userMetadata = session.user.user_metadata ?? {};
+
+  const role = normalizeRole(metadata.role ?? userMetadata.role);
+  const companyIds = normalizeCompanyIds(metadata.company_ids ?? userMetadata.company_ids);
+
+  return {
+    id: session.user.id,
+    email: session.user.email,
+    role,
+    companyIds
+  };
+};
+
+export const signIn = async (email: string, password: string): Promise<AuthenticatedUser> => {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+
+  const mapped = mapSessionUser(data.session);
+  if (!mapped) throw new Error('No fue posible resolver la sesión del usuario.');
+  return mapped;
+};
+
+export const signOut = async (): Promise<void> => {
+  if (!supabase) throw new Error('Supabase no está configurado.');
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+};
+
+export const getCurrentSessionUser = async (): Promise<AuthenticatedUser | null> => {
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return mapSessionUser(data.session);
+};
+
+export const onAuthStateChanged = (cb: (user: AuthenticatedUser | null) => void): (() => void) => {
+  if (!supabase) return () => {};
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => cb(mapSessionUser(session)));
+  return () => data.subscription.unsubscribe();
 };

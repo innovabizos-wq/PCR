@@ -1,6 +1,7 @@
 import { catalogProducts, CatalogProduct } from '../data/catalog';
 import { getCatalogProducts } from './catalogService';
 import { supabase } from '../lib/supabase';
+import { CompanyId } from '../types/company';
 
 const TABLE_NAME = 'inventory_products';
 
@@ -19,9 +20,10 @@ interface InventoryRow {
   cuenta_cobro: string;
   cuentas_pago: string[];
   catalog_version_id: string | null;
+  company_id: CompanyId;
 }
 
-const toRow = (item: CatalogProduct, catalogVersionId: string | null): InventoryRow => ({
+const toRow = (item: CatalogProduct, catalogVersionId: string | null, companyId: CompanyId): InventoryRow => ({
   id: item.id,
   sku: item.sku,
   nombre: item.nombre,
@@ -35,7 +37,24 @@ const toRow = (item: CatalogProduct, catalogVersionId: string | null): Inventory
   garantia: item.garantia,
   cuenta_cobro: item.cuentaCobro,
   cuentas_pago: item.cuentasPago,
-  catalog_version_id: catalogVersionId
+  catalog_version_id: catalogVersionId,
+  company_id: companyId
+});
+
+const fromRow = (row: InventoryRow): CatalogProduct => ({
+  id: row.id,
+  sku: row.sku,
+  nombre: row.nombre,
+  categoria: row.categoria as CatalogProduct['categoria'],
+  descripcion: row.descripcion,
+  precio: row.precio,
+  impuesto: row.impuesto,
+  tamano: row.tamano,
+  estiloFoto: row.estilo_foto,
+  stock: row.stock,
+  garantia: row.garantia,
+  cuentaCobro: row.cuenta_cobro,
+  cuentasPago: row.cuentas_pago
 });
 
 const getActiveCatalogVersionId = async (): Promise<string | null> => {
@@ -53,22 +72,30 @@ const getActiveCatalogVersionId = async (): Promise<string | null> => {
   return data?.id ?? null;
 };
 
-export async function getInventoryProducts(): Promise<CatalogProduct[]> {
+export async function getInventoryProducts(companyId: CompanyId): Promise<CatalogProduct[]> {
   const products = await getCatalogProducts();
 
-  if (products.length > 0) return products;
+  if (products.length > 0 && !supabase) return products;
 
   if (!supabase) return catalogProducts;
-  await saveInventoryProducts(catalogProducts);
-  return catalogProducts;
+
+  const { data, error } = await supabase.from(TABLE_NAME).select('*').eq('company_id', companyId);
+  if (error) throw error;
+
+  if (!data || data.length === 0) {
+    await saveInventoryProducts(catalogProducts, companyId);
+    return catalogProducts;
+  }
+
+  return (data as InventoryRow[]).map(fromRow);
 }
 
-export async function saveInventoryProducts(products: CatalogProduct[]): Promise<void> {
+export async function saveInventoryProducts(products: CatalogProduct[], companyId: CompanyId): Promise<void> {
   if (!supabase) return;
 
   const activeCatalogVersionId = await getActiveCatalogVersionId();
-  const payload = products.map((item) => toRow(item, activeCatalogVersionId));
-  const { error } = await supabase.from(TABLE_NAME).upsert(payload, { onConflict: 'id' });
+  const payload = products.map((item) => toRow(item, activeCatalogVersionId, companyId));
+  const { error } = await supabase.from(TABLE_NAME).upsert(payload, { onConflict: 'id,company_id' });
   if (error) throw error;
 }
 
