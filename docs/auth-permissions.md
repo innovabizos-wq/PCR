@@ -1,15 +1,23 @@
 # Auth y permisos
 
-- Supabase Auth reemplaza completamente login fake/local.
-- Hay un usuario bootstrap local para acceso inicial/offline: `prueba@correo.com` / `Prueba1234` con rol `super_admin`.
-- Además del flujo Supabase Auth, existe fallback local en `localStorage` para crear y autenticar usuarios desde el panel de administración.
+- La autenticación principal usa **Supabase Auth** (`signInWithPassword`, sesión real y `signOut`).
+- Ya no se usa usuario fake local ni sesión inventada en `localStorage` como fuente principal.
 - Roles base: `super_admin`, `admin_empresa`, `ventas`, `inventario`, `consulta`.
 - Acciones base: `ver`, `crear`, `editar`, `eliminar`, `exportar`, `aprobar`, `administrar`.
 - Matriz de permisos central en `src/domain/auth/permissions.ts`.
 
-## Checklist de verificación manual de acceso
+## Bootstrap seguro de administrador
 
-1. En Supabase Dashboard, abrir **Authentication → Users** y confirmar que exista el email exacto.
-2. Si no existe, crear el usuario con email verificado y asignar la contraseña correspondiente.
-3. Validar inicio de sesión en la app para confirmar que `signInWithPassword` responde sin error.
-4. Antes de merge, ejecutar `git status`, `npm run lint` y `npm run typecheck` para detectar conflictos locales y errores de integración.
+1. Configura variables de entorno en tu shell:
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `ADMIN_EMAIL` (opcional, por defecto `admin@policarbonatocr.com`)
+   - `ADMIN_PASSWORD` (obligatoria)
+   - `ADMIN_COMPANY_IDS` (opcional, por defecto `oz,pt,ds`)
+2. Ejecuta:
+
+```bash
+npm run auth:bootstrap-admin
+```
+
+El script crea (o actualiza) un usuario real en Supabase con rol `super_admin` y `company_ids` en `app_metadata`.
