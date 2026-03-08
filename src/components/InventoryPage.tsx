@@ -38,7 +38,11 @@ const stockStatus = (stock: number): InventoryStatus => {
   return 'optimo';
 };
 
-function InventoryPage() {
+interface InventoryPageProps {
+  companyId: 'oz' | 'pt' | 'ds';
+}
+
+function InventoryPage({ companyId }: InventoryPageProps) {
   const [products, setProducts] = useState<CatalogProduct[]>(catalogProducts);
   const [draftProducts, setDraftProducts] = useState<CatalogProduct[]>(catalogProducts);
   const [search, setSearch] = useState('');
@@ -54,7 +58,7 @@ function InventoryPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const rows = await getInventoryProducts();
+        const rows = await getInventoryProducts(companyId);
         setProducts(rows);
         setDraftProducts(rows);
       } catch (error) {
@@ -65,7 +69,7 @@ function InventoryPage() {
     };
 
     load();
-  }, []);
+  }, [companyId]);
 
   const inventoryRows = useMemo<InventoryItem[]>(() => {
     return products.map((product, index) => ({
@@ -152,7 +156,7 @@ function InventoryPage() {
     setSavingSheet(true);
     setMessage('');
     try {
-      await saveInventoryProducts(draftProducts);
+      await saveInventoryProducts(draftProducts, companyId);
       setProducts(draftProducts);
       setMessage('Cambios guardados correctamente en base de datos.');
       setShowSheet(false);

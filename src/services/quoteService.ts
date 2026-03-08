@@ -2,7 +2,6 @@ import { supabase } from '../lib/supabase';
 import { CalculationResult } from '../types/calculator';
 import { generateQuoteNumber } from '../utils/calculations';
 import { CompanyId } from '../types/company';
-import { DEFAULT_COMPANY_ID } from '../domain/company/company';
 
 export interface SaveQuoteInput {
   result: CalculationResult;
@@ -12,7 +11,7 @@ export interface SaveQuoteInput {
   clientName: string;
   clientEmail?: string;
   notes?: string;
-  companyId?: CompanyId;
+  companyId: CompanyId;
 }
 
 interface NormalizedSaveQuoteInput extends SaveQuoteInput {
@@ -74,7 +73,7 @@ export async function saveQuote(input: SaveQuoteInput): Promise<void> {
     status: 'draft',
     notes: normalized.notes,
     created_by: authData.user.id,
-    company_id: normalized.companyId ?? DEFAULT_COMPANY_ID
+    company_id: normalized.companyId
   });
 
   if (insertError) throw insertError;
