@@ -51,6 +51,19 @@ npm run auth:bootstrap-admin
 
 Al terminar, ese usuario puede iniciar sesión con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` indicados y queda con rol `super_admin` + acceso a las empresas configuradas.
 
+## Pruebas automatizadas (base mínima)
+```bash
+npm run test
+```
+
+También puedes ejecutar por pasos:
+```bash
+npm run test:build
+npm run test:unit
+```
+
+Las pruebas cubren reglas núcleo de cálculo (policarbonato, PVC, WPC, zacate), IVA, descuentos, redondeo monetario y numeración de cotizaciones por categoría/empresa.
+
 ## Validación técnica
 ```bash
 npm run typecheck

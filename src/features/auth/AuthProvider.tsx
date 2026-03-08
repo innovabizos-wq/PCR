@@ -11,17 +11,55 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const SESSION_RESOLUTION_TIMEOUT_MS = 8000;
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<AuthenticatedUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getCurrentSessionUser()
-      .then(setUser)
-      .finally(() => setLoading(false));
+    let active = true;
 
-    return onAuthStateChanged(setUser);
+    const resolveInitialSession = async () => {
+      const timeout = new Promise<null>((resolve) => {
+        setTimeout(() => {
+          console.warn('Tiempo de carga de sesión agotado, mostrando login.');
+          resolve(null);
+        }, SESSION_RESOLUTION_TIMEOUT_MS);
+      });
+
+      try {
+        const sessionUser = await Promise.race([getCurrentSessionUser(), timeout]);
+        if (!active) return;
+        setUser(sessionUser);
+      } catch (error) {
+        console.error('No se pudo resolver la sesión inicial.', error);
+        if (active) setUser(null);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    void resolveInitialSession();
+
+    const unsubscribe = onAuthStateChanged(
+      (nextUser) => {
+        if (!active) return;
+        setUser(nextUser);
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error al escuchar cambios de autenticación.', error);
+        if (!active) return;
+        setUser(null);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
