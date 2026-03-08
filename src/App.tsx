@@ -19,6 +19,8 @@ import {
   Waves
 } from 'lucide-react';
 import MaterialsTable from './components/MaterialsTable';
+import MetricInput from './components/forms/MetricInput';
+import ToastStack, { ToastItem } from './components/feedback/ToastStack';
 import BillingPage from './components/BillingPage';
 import InventoryPage from './components/InventoryPage';
 import ProformaPreview, { ProformaData } from './components/ProformaPreview';
@@ -38,6 +40,8 @@ import {
   SystemUser
 } from './features/auth/authService';
 import { DEFAULT_COMPANY_ID } from './domain/company/company';
+import { toUserMessage } from './utils/appError';
+import { getCatalogProducts } from './services/catalogService';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
 type MainPage = 'calculator' | 'billing' | 'inventory' | 'admin';
@@ -125,37 +129,6 @@ const DEFAULT_POLY_TEXTURES: Record<SheetColor, string> = {
 const DEFAULT_USERS: SystemUser[] = getBootstrapUsers();
 
 
-interface MetricInputProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  step?: number;
-}
-
-function MetricInput({ label, value, onChange, step = 0.1 }: MetricInputProps) {
-  return (
-    <div>
-      <label className="mb-1 block text-xs font-bold uppercase text-gray-500">{label}</label>
-      <input
-        type="text"
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onWheel={(e) => {
-          if (document.activeElement !== e.currentTarget) return;
-          e.preventDefault();
-          const current = parseMetric(value);
-          const delta = e.deltaY < 0 ? step : -step;
-          const next = Math.max(0, Number((current + delta).toFixed(2)));
-          onChange(String(next));
-        }}
-        className="h-10 w-32 rounded-lg border border-gray-300 px-3 text-sm font-bold focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500"
-        placeholder="0.00"
-      />
-    </div>
-  );
-}
-
 function App() {
   const [activePage, setActivePage] = useState<MainPage>('calculator');
   const [activeModule, setActiveModule] = useState<MaterialModule>('pvc');
@@ -164,6 +137,7 @@ function App() {
   const [result, setResult] = useState<CalculationResult | null>(null);
   const [editedMaterials, setEditedMaterials] = useState<Material[] | null>(null);
   const [error, setError] = useState('');
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [billingDraft, setBillingDraft] = useState<{
     category: 'policarbonato' | 'pvc' | 'wpc' | 'zacate';
     width: number;
@@ -211,6 +185,19 @@ function App() {
   const isInventoryPage = activePage === 'inventory';
   const isCalculatorPage = activePage === 'calculator';
   const isAdminPage = activePage === 'admin';
+
+
+  const pushToast = (tone: ToastItem['tone'], message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setToasts((prev) => [...prev, { id, tone, message }]);
+    window.setTimeout(() => setToasts((prev) => prev.filter((item) => item.id !== id)), 3500);
+  };
+
+  useEffect(() => {
+    getCatalogProducts().catch((err) => {
+      console.warn('No se pudo precargar catálogo versionado.', err);
+    });
+  }, []);
 
   useLayoutEffect(() => {
     if (!centerInnerRef.current) return;
@@ -289,7 +276,9 @@ function App() {
         );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error en el cálculo');
+      const msg = toUserMessage(err, 'Error en el cálculo');
+      setError(msg);
+      pushToast('error', msg);
       setResult(null);
     }
   };
@@ -547,7 +536,9 @@ function App() {
 
       pdf.save(`cotizacion_${quoteNumber}.pdf`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo exportar el PDF');
+      const msg = toUserMessage(err, 'No se pudo exportar el PDF');
+      setError(msg);
+      pushToast('error', msg);
     }
   };
 
@@ -612,7 +603,9 @@ function App() {
       link.click();
       link.remove();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo capturar el visualizador');
+      const msg = toUserMessage(err, 'No se pudo capturar el visualizador');
+      setError(msg);
+      pushToast('error', msg);
     }
   };
 
@@ -703,6 +696,7 @@ function App() {
         background: '#f8fafc'
       }}
     >
+      <ToastStack items={toasts} onDismiss={(id) => setToasts((prev) => prev.filter((item) => item.id !== id))} />
       <aside className="flex h-screen flex-col overflow-hidden border-r border-black/10 bg-white">
         <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
           <img src={logoUrl} alt="Policarbonato CR" className="h-8 w-8" />
@@ -914,8 +908,8 @@ function App() {
                   </h2>
 
                   <div className="flex flex-wrap items-end gap-4">
-                    <MetricInput label="Ancho (m)" value={widthInput} onChange={setWidthInput} />
-                    <MetricInput label="Alto (m)" value={heightInput} onChange={setHeightInput} />
+                    <MetricInput label="Ancho (m)" value={widthInput} onChange={setWidthInput} parse={parseMetric} />
+                    <MetricInput label="Alto (m)" value={heightInput} onChange={setHeightInput} parse={parseMetric} />
 
                     {isPvc && (
                       <>

@@ -52,6 +52,15 @@ export const catalogProducts: CatalogProduct[] = [
   { id: 'zacate-35mm', sku: 'ZAC-35MM', nombre: 'Zacate sintético 35mm', categoria: 'zacate', descripcion: 'Rollo de zacate residencial', precio: 6500, impuesto: 0.13, tamano: '2m ancho', estiloFoto: 'textures/zacate-grass.svg', stock: 50, garantia: '18 meses', cuentaCobro: 'Ventas Zacate', cuentasPago: cuentasBase }
 ];
 
-export const getCatalogProduct = (id: string) => catalogProducts.find((product) => product.id === id);
+
+let runtimeCatalog: CatalogProduct[] | null = null;
+
+export const setRuntimeCatalogProducts = (products: CatalogProduct[]): void => {
+  runtimeCatalog = products;
+};
+
+export const getRuntimeCatalogProducts = (): CatalogProduct[] => runtimeCatalog ?? catalogProducts;
+
+export const getCatalogProduct = (id: string) => getRuntimeCatalogProducts().find((product) => product.id === id);
 
 export const getCatalogPrice = (id: string, fallback: number): number => getCatalogProduct(id)?.precio ?? fallback;

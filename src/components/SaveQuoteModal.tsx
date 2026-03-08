@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { CalculationResult } from '../types/calculator';
 import { saveQuote, validateQuoteInput } from '../services/quoteService';
+import { toUserMessage } from '../utils/appError';
 
 interface SaveQuoteModalProps {
   result: CalculationResult;
@@ -38,7 +39,7 @@ export default function SaveQuoteModal({
         notes
       });
     } catch (validationError) {
-      setError(validationError instanceof Error ? validationError.message : 'Error de validación.');
+      setError(toUserMessage(validationError, 'Error de validación.'));
       return;
     }
 
@@ -59,7 +60,7 @@ export default function SaveQuoteModal({
       onSave();
     } catch (err) {
       console.error('Error saving quote:', err);
-      setError(err instanceof Error ? err.message : 'Error al guardar la cotización. Por favor intente nuevamente.');
+      setError(toUserMessage(err, 'Error al guardar la cotización. Por favor intente nuevamente.'));
     } finally {
       setSaving(false);
     }
