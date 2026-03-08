@@ -7,6 +7,7 @@ import {
   FileDown,
   FileText,
   LayoutDashboard,
+  Truck,
   Leaf,
   LogOut,
   LockKeyhole,
@@ -23,6 +24,7 @@ import MetricInput from '../../components/forms/MetricInput';
 import ToastStack, { ToastItem } from '../../components/feedback/ToastStack';
 import BillingPage from '../../components/BillingPage';
 import InventoryPage from '../../components/InventoryPage';
+import DispatchPlannerPage from '../../components/DispatchPlannerPage';
 import ProformaPreview, { ProformaData } from '../../components/ProformaPreview';
 import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } from '../../types/calculator';
 import { calculateQuote, formatCurrency } from '../../utils/calculations';
@@ -42,7 +44,7 @@ import { createLocalUser, listLocalUsers, LocalAuthUser } from '../auth/localUse
 import { useCompany } from '../company/CompanyContext';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
-type MainPage = 'calculator' | 'billing' | 'inventory' | 'admin';
+type MainPage = 'calculator' | 'billing' | 'inventory' | 'dispatch' | 'admin';
 type WpcTone = 'teca' | 'nogal' | 'grafito';
 type ZacateHeight = '35mm' | '50mm';
 type EmployeeStatus = 'activo' | 'almuerzo' | 'cafe' | 'baño' | 'logout';
@@ -183,6 +185,7 @@ export default function AppWorkspace() {
   const isBillingPage = activePage === 'billing';
   const isInventoryPage = activePage === 'inventory';
   const isCalculatorPage = activePage === 'calculator';
+  const isDispatchPage = activePage === 'dispatch';
   const isAdminPage = activePage === 'admin' && can('admin', 'ver');
 
   const toggleCompanyForUser = (companyId: string) => {
@@ -697,7 +700,7 @@ export default function AppWorkspace() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: isBillingPage || isInventoryPage || isAdminPage
+        gridTemplateColumns: isBillingPage || isInventoryPage || isDispatchPage || isAdminPage
           ? `${LEFT_WIDTH}px minmax(0, 1fr)`
           : `${LEFT_WIDTH}px minmax(0, 1fr) ${RIGHT_PANEL_MAX}px`,
         height: '100vh',
@@ -742,6 +745,15 @@ export default function AppWorkspace() {
           >
             <Package className="h-5 w-5" />
             <span className="text-sm font-medium">Inventario</span>
+          </button>
+          <button
+            onClick={() => setActivePage('dispatch')}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+              isDispatchPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Truck className="h-5 w-5" />
+            <span className="text-sm font-medium">Despacho</span>
           </button>
           <button
             onClick={() => setActivePage('admin')}
@@ -799,7 +811,7 @@ export default function AppWorkspace() {
         className="center-scroll"
         style={{
           height: '100vh',
-          overflowY: isCalculatorPage ? 'auto' : 'hidden',
+          overflowY: isCalculatorPage || isDispatchPage ? 'auto' : 'hidden',
           overflowX: 'hidden',
           display: 'flex',
           justifyContent: 'center',
@@ -827,7 +839,7 @@ export default function AppWorkspace() {
                 </button>
                 <div>
                   <h1 className="text-xl font-black uppercase text-[#00011a]">
-                    {isBillingPage ? 'Facturación y Proformas' : isInventoryPage ? 'Inventario Maestro' : isAdminPage ? 'Panel de Administración' : 'Calculadora Pro v3.2.2'}
+                    {isBillingPage ? 'Facturación y Proformas' : isInventoryPage ? 'Inventario Maestro' : isDispatchPage ? 'Despacho e Instalaciones' : isAdminPage ? 'Panel de Administración' : 'Calculadora Pro v3.2.2'}
                   </h1>
                 </div>
               </div>
@@ -840,11 +852,13 @@ export default function AppWorkspace() {
             </div>
           </header>
 
-          <div className={isCalculatorPage ? 'space-y-4 px-6 py-6' : 'h-full overflow-y-auto space-y-4 px-6 py-6'}>
+          <div className={isCalculatorPage || isDispatchPage ? 'space-y-4 px-6 py-6' : 'h-full overflow-y-auto space-y-4 px-6 py-6'}>
             {isBillingPage ? (
               <BillingPage logoUrl={logoUrl} initialQuote={billingDraft} />
             ) : isInventoryPage ? (
               <InventoryPage companyId={activeCompanyId as 'oz' | 'pt' | 'ds'} />
+) : isDispatchPage ? (
+              <DispatchPlannerPage />
             ) : isAdminPage ? (
               <section className="space-y-4">
                 <div className="rounded-xl border border-gray-200 bg-white p-6">
