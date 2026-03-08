@@ -1,4 +1,5 @@
 -- Endurecer RLS por autenticación + empresa
+-- Corrección: validar company_ids (JWT app_metadata) con jsonb_array_elements_text
 
 alter table if exists public.quotes enable row level security;
 alter table if exists public.inventory_products enable row level security;
@@ -13,7 +14,11 @@ on public.quotes
 for select
 to authenticated
 using (
-  company_id = any (coalesce((auth.jwt() -> 'app_metadata' -> 'company_ids')::jsonb, '[]'::jsonb)::text[])
+  exists (
+    select 1
+    from jsonb_array_elements_text(coalesce(auth.jwt() -> 'app_metadata' -> 'company_ids', '[]'::jsonb)) as company(value)
+    where company.value = quotes.company_id
+  )
 );
 
 create policy "quotes_authenticated_company_insert"
@@ -21,7 +26,11 @@ on public.quotes
 for insert
 to authenticated
 with check (
-  company_id = any (coalesce((auth.jwt() -> 'app_metadata' -> 'company_ids')::jsonb, '[]'::jsonb)::text[])
+  exists (
+    select 1
+    from jsonb_array_elements_text(coalesce(auth.jwt() -> 'app_metadata' -> 'company_ids', '[]'::jsonb)) as company(value)
+    where company.value = quotes.company_id
+  )
 );
 
 create policy "quotes_authenticated_company_update"
@@ -29,8 +38,16 @@ on public.quotes
 for update
 to authenticated
 using (
-  company_id = any (coalesce((auth.jwt() -> 'app_metadata' -> 'company_ids')::jsonb, '[]'::jsonb)::text[])
+  exists (
+    select 1
+    from jsonb_array_elements_text(coalesce(auth.jwt() -> 'app_metadata' -> 'company_ids', '[]'::jsonb)) as company(value)
+    where company.value = quotes.company_id
+  )
 )
 with check (
-  company_id = any (coalesce((auth.jwt() -> 'app_metadata' -> 'company_ids')::jsonb, '[]'::jsonb)::text[])
+  exists (
+    select 1
+    from jsonb_array_elements_text(coalesce(auth.jwt() -> 'app_metadata' -> 'company_ids', '[]'::jsonb)) as company(value)
+    where company.value = quotes.company_id
+  )
 );

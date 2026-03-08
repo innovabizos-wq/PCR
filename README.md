@@ -57,3 +57,6 @@ npm run typecheck
 npm run lint
 npm run build
 ```
+
+## Nota de migración RLS
+- Se corrigió `supabase/migrations/20260312110000_harden_rls_company_scope.sql` para validar `app_metadata.company_ids` desde JWT con `jsonb_array_elements_text(...)`, evitando el cast inválido de `jsonb` a `text[]`.
