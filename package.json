@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "auth:bootstrap-admin": "node scripts/bootstrap-supabase-admin.mjs"
+    "auth:bootstrap-admin": "node scripts/bootstrap-supabase-admin.mjs",
+    "test": "npm run test:unit",
+    "test:unit": "npm run test:build && node .tmp-tests/src/tests/business-core.test.js && node -e \"require('fs').rmSync('.tmp-tests',{recursive:true,force:true})\"",
+    "test:build": "node -e \"const fs=require('fs');fs.rmSync('.tmp-tests',{recursive:true,force:true});fs.mkdirSync('.tmp-tests',{recursive:true});\" && sucrase src -d .tmp-tests/src --transforms typescript,jsx,imports && node -e \"require('fs').writeFileSync('.tmp-tests/package.json', JSON.stringify({type:'commonjs'}));\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
