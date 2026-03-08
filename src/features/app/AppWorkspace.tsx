@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Calculator,
   Camera,
@@ -35,7 +35,10 @@ import { toUserMessage } from '../../utils/appError';
 import { getCatalogProducts } from '../../services/catalogService';
 import { loadCalculatorDraft, saveCalculatorDraft } from '../../services/calculatorDraftService';
 import { trackEvent } from '../../services/telemetryService';
+import { COMPANIES } from '../../domain/company/company';
+import { UserRole } from '../../domain/auth/permissions';
 import { useAuth } from '../auth/AuthProvider';
+import { createLocalUser, listLocalUsers, LocalAuthUser } from '../auth/localUserStore';
 import { useCompany } from '../company/CompanyContext';
 
 type MaterialModule = 'pvc' | 'policarbonato' | 'zacate' | 'wpc';
@@ -140,8 +143,13 @@ export default function AppWorkspace() {
     quoteNumber?: string;
   } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [adminUsers, setAdminUsers] = useState<LocalAuthUser[]>(() => listLocalUsers());
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<UserRole>('consulta');
+  const [newUserCompanies, setNewUserCompanies] = useState<string[]>(() => COMPANIES.map((company) => company.id));
 
-  const { user, logout, can } = useAuth();
+  const { logout, can } = useAuth();
   const { activeCompanyId, availableCompanies, setActiveCompanyId } = useCompany();
 
   const [polyColor, setPolyColor] = useState<SheetColor>((initialDraft?.polyColor as SheetColor) ?? 'blanco');
@@ -177,11 +185,38 @@ export default function AppWorkspace() {
   const isCalculatorPage = activePage === 'calculator';
   const isAdminPage = activePage === 'admin' && can('admin', 'ver');
 
+  const toggleCompanyForUser = (companyId: string) => {
+    setNewUserCompanies((prev) => (prev.includes(companyId) ? prev.filter((id) => id !== companyId) : [...prev, companyId]));
+  };
+
 
   const pushToast = (tone: ToastItem['tone'], message: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setToasts((prev) => [...prev, { id, tone, message }]);
     window.setTimeout(() => setToasts((prev) => prev.filter((item) => item.id !== id)), 3500);
+  };
+
+  const handleCreateAdminUser = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!newUserEmail.trim() || !newUserPassword.trim()) {
+      pushToast('error', 'Debes indicar correo y contraseña.');
+      return;
+    }
+    if (!newUserCompanies.length) {
+      pushToast('error', 'Selecciona al menos una empresa para el usuario.');
+      return;
+    }
+    try {
+      createLocalUser({ email: newUserEmail, password: newUserPassword, role: newUserRole, companyIds: newUserCompanies });
+      setAdminUsers(listLocalUsers());
+      setNewUserEmail('');
+      setNewUserPassword('');
+      setNewUserRole('consulta');
+      setNewUserCompanies(COMPANIES.map((company) => company.id));
+      pushToast('success', 'Usuario creado correctamente.');
+    } catch (err) {
+      pushToast('error', toUserMessage(err, 'No fue posible crear el usuario.'));
+    }
   };
 
   useEffect(() => {
@@ -824,6 +859,61 @@ export default function AppWorkspace() {
 
                 <div className="rounded-xl border border-gray-200 bg-white p-6">
                   <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-500">Usuarios, roles y permisos</h3>
+                  <form onSubmit={handleCreateAdminUser} className="mb-6 grid gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 md:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Correo</label>
+                      <input
+                        type="email"
+                        required
+                        value={newUserEmail}
+                        onChange={(e) => setNewUserEmail(e.target.value)}
+                        className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                        placeholder="usuario@empresa.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Contraseña</label>
+                      <input
+                        type="password"
+                        required
+                        minLength={8}
+                        value={newUserPassword}
+                        onChange={(e) => setNewUserPassword(e.target.value)}
+                        className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm"
+                        placeholder="Mínimo 8 caracteres"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Rol</label>
+                      <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value as UserRole)} className="h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm">
+                        <option value="super_admin">super_admin</option>
+                        <option value="admin_empresa">admin_empresa</option>
+                        <option value="ventas">ventas</option>
+                        <option value="inventario">inventario</option>
+                        <option value="consulta">consulta</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Empresas permitidas</label>
+                      <div className="flex flex-wrap gap-2">
+                        {COMPANIES.map((company) => (
+                          <label key={company.id} className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700">
+                            <input
+                              type="checkbox"
+                              checked={newUserCompanies.includes(company.id)}
+                              onChange={() => toggleCompanyForUser(company.id)}
+                            />
+                            {company.commercialName} ({company.id.toUpperCase()})
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <button type="submit" className="h-10 rounded-lg bg-[#00011a] px-4 text-xs font-bold uppercase tracking-[0.2em] text-white hover:bg-[#101339]">
+                        Crear usuario
+                      </button>
+                    </div>
+                  </form>
                   <div className="overflow-hidden rounded-xl border border-gray-200">
                     <table className="min-w-full divide-y divide-gray-200 text-sm">
                       <thead className="bg-gray-50">
@@ -835,11 +925,15 @@ export default function AppWorkspace() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 bg-white">
-                        {[user].filter(Boolean).map((user) => (
-                          <tr key={user?.id}>
-                            <td className="px-4 py-3 font-bold text-[#00011a]">{user?.email}</td>
-                            <td className="px-4 py-3 text-gray-700">{user?.role}</td>
-                            <td className="px-4 py-3 text-gray-700">{availableCompanies.map((c) => c.commercialName).join(', ')}</td>
+                        {adminUsers.map((adminUser) => (
+                          <tr key={adminUser.id}>
+                            <td className="px-4 py-3 font-bold text-[#00011a]">{adminUser.email}</td>
+                            <td className="px-4 py-3 text-gray-700">{adminUser.role}</td>
+                            <td className="px-4 py-3 text-gray-700">
+                              {adminUser.companyIds
+                                .map((companyId) => COMPANIES.find((company) => company.id === companyId)?.commercialName ?? companyId)
+                                .join(', ')}
+                            </td>
                             <td className="px-4 py-3">
                               <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">Activo</span>
                             </td>
