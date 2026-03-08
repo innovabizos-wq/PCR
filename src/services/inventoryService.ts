@@ -1,4 +1,5 @@
-import { catalogProducts, CatalogCategory, CatalogProduct } from '../data/catalog';
+import { catalogProducts, CatalogProduct } from '../data/catalog';
+import { getCatalogProducts } from './catalogService';
 import { supabase } from '../lib/supabase';
 
 const TABLE_NAME = 'inventory_products';
@@ -17,32 +18,10 @@ interface InventoryRow {
   garantia: string;
   cuenta_cobro: string;
   cuentas_pago: string[];
+  catalog_version_id: string | null;
 }
 
-const normalizeCategory = (value: string): CatalogCategory => {
-  if (value === 'policarbonato' || value === 'pvc' || value === 'wpc' || value === 'zacate' || value === 'accesorio' || value === 'textura') {
-    return value;
-  }
-  return 'accesorio';
-};
-
-const toCatalogProduct = (item: Partial<InventoryRow>): CatalogProduct => ({
-  id: item.id || `custom-${crypto.randomUUID()}`,
-  sku: item.sku || '',
-  nombre: item.nombre || '',
-  categoria: normalizeCategory(item.categoria || 'accesorio'),
-  descripcion: item.descripcion || '',
-  precio: Number(item.precio) || 0,
-  impuesto: Number(item.impuesto) || 0.13,
-  tamano: item.tamano || '',
-  estiloFoto: item.estilo_foto || '',
-  stock: Number(item.stock) || 0,
-  garantia: item.garantia || '',
-  cuentaCobro: item.cuenta_cobro || '',
-  cuentasPago: Array.isArray(item.cuentas_pago) ? item.cuentas_pago : []
-});
-
-const toRow = (item: CatalogProduct): InventoryRow => ({
+const toRow = (item: CatalogProduct, catalogVersionId: string | null): InventoryRow => ({
   id: item.id,
   sku: item.sku,
   nombre: item.nombre,
@@ -55,31 +34,40 @@ const toRow = (item: CatalogProduct): InventoryRow => ({
   stock: Number(item.stock) || 0,
   garantia: item.garantia,
   cuenta_cobro: item.cuentaCobro,
-  cuentas_pago: item.cuentasPago
+  cuentas_pago: item.cuentasPago,
+  catalog_version_id: catalogVersionId
 });
 
+const getActiveCatalogVersionId = async (): Promise<string | null> => {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('catalog_versions')
+    .select('id')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.id ?? null;
+};
+
 export async function getInventoryProducts(): Promise<CatalogProduct[]> {
+  const products = await getCatalogProducts();
+
+  if (products.length > 0) return products;
+
   if (!supabase) return catalogProducts;
-
-  const { data, error } = await supabase.from(TABLE_NAME).select('*').order('created_at', { ascending: true });
-
-  if (error) {
-    console.warn('Error consultando inventario en Supabase, usando catálogo local.', error);
-    return catalogProducts;
-  }
-
-  if (!data || data.length === 0) {
-    await saveInventoryProducts(catalogProducts);
-    return catalogProducts;
-  }
-
-  return data.map((row) => toCatalogProduct(row as Partial<InventoryRow>));
+  await saveInventoryProducts(catalogProducts);
+  return catalogProducts;
 }
 
 export async function saveInventoryProducts(products: CatalogProduct[]): Promise<void> {
   if (!supabase) return;
 
-  const payload = products.map((item) => toRow(item));
+  const activeCatalogVersionId = await getActiveCatalogVersionId();
+  const payload = products.map((item) => toRow(item, activeCatalogVersionId));
   const { error } = await supabase.from(TABLE_NAME).upsert(payload, { onConflict: 'id' });
   if (error) throw error;
 }

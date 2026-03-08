@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Minus, MoreVertical, Plus, Save, Search, Upload } from 'lucide-react';
 import { catalogProducts, CatalogCategory, CatalogProduct } from '../data/catalog';
 import { getInventoryProducts, saveInventoryProducts, uploadTextureFile } from '../services/inventoryService';
+import { toUserMessage } from '../utils/appError';
 
 type InventoryStatus = 'optimo' | 'bajo' | 'agotado';
 
@@ -57,7 +58,7 @@ function InventoryPage() {
         setProducts(rows);
         setDraftProducts(rows);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : 'No se pudo cargar el inventario.');
+        setMessage(toUserMessage(error, 'No se pudo cargar el inventario.'));
       } finally {
         setLoading(false);
       }
@@ -156,7 +157,7 @@ function InventoryPage() {
       setMessage('Cambios guardados correctamente en base de datos.');
       setShowSheet(false);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Error guardando cambios.');
+      setMessage(toUserMessage(error, 'Error guardando cambios.'));
     } finally {
       setSavingSheet(false);
     }
@@ -301,7 +302,7 @@ function InventoryPage() {
                                           const url = await uploadTextureFile(file);
                                           setTextureUrl(row.id, url);
                                         } catch (error) {
-                                          setMessage(error instanceof Error ? error.message : 'No se pudo cargar textura.');
+                                          setMessage(toUserMessage(error, 'No se pudo cargar textura.'));
                                         }
                                       }}
                                     />
