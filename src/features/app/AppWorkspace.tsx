@@ -219,8 +219,8 @@ export default function AppWorkspace() {
   useEffect(() => {
     const loadTextures = async () => {
       try {
-        const inventory = await getInventoryProducts(activeCompanyId as 'oz' | 'pt' | 'ds');
-        const textureRows = inventory.filter((item) => item.categoria === 'textura');
+        const inventoryResponse = await getInventoryProducts(activeCompanyId as 'oz' | 'pt' | 'ds');
+        const textureRows = inventoryResponse.products.filter((item) => item.categoria === 'textura');
         if (!textureRows.length) return;
 
         const nextTextures = { ...DEFAULT_POLY_TEXTURES };

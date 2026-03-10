@@ -5,6 +5,7 @@ import { calculateWpcQuote } from '../utils/wpcCalculations';
 import { calculateZacateQuote } from '../utils/zacateCalculations';
 import { calculateProformaTotals } from '../domain/quotes/proformaTotals';
 import { getQuoteCounterScope, nextQuoteConsecutive } from '../domain/quotes/quoteNumbering';
+import { validateInventoryProduct } from '../domain/inventory/validation';
 
 const runCase = (name: string, callback: () => void): void => {
   try {
@@ -78,6 +79,46 @@ runCase('numeración separa consecutivos por empresa y categoría', () => {
   assert.equal(nextQuoteConsecutive(0, 'policarbonato'), 'P-0001');
   assert.equal(nextQuoteConsecutive(9, 'wpc'), 'W-0010');
   assert.equal(nextQuoteConsecutive(99, 'zacate'), 'Z-0100');
+});
+
+
+
+runCase('inventario valida invariantes de precio/impuesto/stock', () => {
+  validateInventoryProduct({
+    id: 'sku-1',
+    sku: 'SKU-1',
+    nombre: 'Producto',
+    categoria: 'accesorio',
+    descripcion: '',
+    precio: 100,
+    impuesto: 0.13,
+    tamano: '',
+    estiloFoto: '',
+    stock: 10,
+    garantia: '',
+    cuentaCobro: '',
+    cuentasPago: []
+  });
+
+  assert.throws(
+    () =>
+      validateInventoryProduct({
+        id: 'sku-2',
+        sku: '',
+        nombre: 'Producto',
+        categoria: 'accesorio',
+        descripcion: '',
+        precio: -1,
+        impuesto: 1.5,
+        tamano: '',
+        estiloFoto: '',
+        stock: -2,
+        garantia: '',
+        cuentaCobro: '',
+        cuentasPago: []
+      }),
+    /Valores inválidos|id, SKU y nombre/
+  );
 });
 
 console.log('Business core tests passed.');

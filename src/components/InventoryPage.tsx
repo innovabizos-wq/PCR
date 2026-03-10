@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Minus, MoreVertical, Plus, Save, Search, Upload } from 'lucide-react';
 import { catalogProducts, CatalogCategory, CatalogProduct } from '../data/catalog';
-import { getInventoryProducts, saveInventoryProducts, uploadTextureFile } from '../services/inventoryService';
+import { flushInventoryOfflineQueue, getInventoryProducts, saveInventoryProducts, subscribeInventory, uploadTextureFile } from '../services/inventoryService';
 import { toUserMessage } from '../utils/appError';
 
 type InventoryStatus = 'optimo' | 'bajo' | 'agotado';
@@ -54,13 +54,21 @@ function InventoryPage({ companyId }: InventoryPageProps) {
   const [savingSheet, setSavingSheet] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState(new Date(0).toISOString());
+  const [syncState, setSyncState] = useState<'confirmado' | 'pendiente' | 'sincronizando' | 'conflicto'>('confirmado');
+  const [conflictRows, setConflictRows] = useState<Array<{ id: string; db_updated_at: string; db_version: number }>>([]);
+
+  const loadInventory = useCallback(async () => {
+    const response = await getInventoryProducts(companyId);
+    setProducts(response.products);
+    setDraftProducts(response.products);
+    setSnapshotUpdatedAt(response.snapshotUpdatedAt);
+  }, [companyId]);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const rows = await getInventoryProducts(companyId);
-        setProducts(rows);
-        setDraftProducts(rows);
+        await loadInventory();
       } catch (error) {
         setMessage(toUserMessage(error, 'No se pudo cargar el inventario.'));
       } finally {
@@ -69,7 +77,31 @@ function InventoryPage({ companyId }: InventoryPageProps) {
     };
 
     load();
-  }, [companyId]);
+  }, [companyId, loadInventory]);
+
+  useEffect(() => {
+    const channel = subscribeInventory(companyId, () => {
+      void loadInventory();
+      setMessage('Inventario actualizado en tiempo real desde otro usuario/dispositivo.');
+      setSyncState('confirmado');
+    });
+
+    const onReconnect = () => {
+      setSyncState('sincronizando');
+      void flushInventoryOfflineQueue().finally(() => {
+        void loadInventory();
+        setSyncState('confirmado');
+      });
+    };
+
+    window.addEventListener('online', onReconnect);
+    void flushInventoryOfflineQueue();
+
+    return () => {
+      window.removeEventListener('online', onReconnect);
+      if (channel) channel.unsubscribe();
+    };
+  }, [companyId, loadInventory]);
 
   const inventoryRows = useMemo<InventoryItem[]>(() => {
     return products.map((product, index) => ({
@@ -154,13 +186,36 @@ function InventoryPage({ companyId }: InventoryPageProps) {
     if (!approved) return;
 
     setSavingSheet(true);
+    setSyncState('sincronizando');
     setMessage('');
     try {
-      await saveInventoryProducts(draftProducts, companyId);
-      setProducts(draftProducts);
-      setMessage('Cambios guardados correctamente en base de datos.');
+      const result = await saveInventoryProducts({
+        products: draftProducts,
+        companyId,
+        expectedUpdatedAt: snapshotUpdatedAt
+      });
+
+      if (result.status === 'conflict') {
+        setSyncState('conflicto');
+        setConflictRows(result.conflicts ?? []);
+        setMessage('Conflicto detectado: el registro fue actualizado por otro usuario. Recargamos datos para mostrar diff vigente.');
+        await loadInventory();
+        return;
+      }
+
+      if (result.status === 'queued-offline') {
+        setSyncState('pendiente');
+        setMessage('Sin red: cambios en cola local pendientes de sincronización.');
+        return;
+      }
+
+      await loadInventory();
+      setConflictRows([]);
+      setSyncState('confirmado');
+      setMessage('Cambios confirmados por servidor y propagados globalmente.');
       setShowSheet(false);
     } catch (error) {
+      setSyncState('conflicto');
       setMessage(toUserMessage(error, 'Error guardando cambios.'));
     } finally {
       setSavingSheet(false);
@@ -183,6 +238,28 @@ function InventoryPage({ companyId }: InventoryPageProps) {
       </section>
 
       {message && <div className="rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-2 text-sm text-cyan-700">{message}</div>}
+      <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600">Estado de sincronización: <span className="font-semibold uppercase">{syncState}</span></div>
+      {conflictRows.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          <p className="font-semibold">Registros con conflicto</p>
+          <ul className="mt-2 list-disc pl-5">
+            {conflictRows.map((conflict) => (
+              <li key={conflict.id}>
+                {conflict.id} · versión DB {conflict.db_version} · actualizado {new Date(conflict.db_updated_at).toLocaleString('es-CR')}
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => {
+              setConflictRows([]);
+              void loadInventory();
+            }}
+            className="mt-3 rounded border border-amber-500 bg-white px-2 py-1 font-semibold"
+          >
+            Reintentar con datos vigentes
+          </button>
+        </div>
+      )}
 
       <section className="grid gap-4 md:grid-cols-4">
         {dashboardCards.map((card) => (
