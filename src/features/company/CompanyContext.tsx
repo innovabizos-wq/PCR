@@ -1,4 +1,4 @@
-import { createContext, PropsWithChildren, useContext, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 import { COMPANIES } from '../../domain/company/company';
 import { useAuth } from '../auth/AuthProvider';
 
@@ -19,6 +19,14 @@ export function CompanyProvider({ children }: PropsWithChildren) {
   }, [user?.companyIds]);
 
   const [activeCompanyId, setActiveCompanyId] = useState<string>(availableCompanies[0]?.id ?? COMPANIES[0].id);
+
+  useEffect(() => {
+    if (!availableCompanies.length) return;
+    const isStillAllowed = availableCompanies.some((company) => company.id === activeCompanyId);
+    if (!isStillAllowed) {
+      setActiveCompanyId(availableCompanies[0].id);
+    }
+  }, [activeCompanyId, availableCompanies]);
 
   const value = useMemo<CompanyContextValue>(
     () => ({
