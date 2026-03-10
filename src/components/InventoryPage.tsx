@@ -38,6 +38,25 @@ const stockStatus = (stock: number): InventoryStatus => {
   return 'optimo';
 };
 
+const buildDraftRow = (): CatalogProduct => {
+  const stamp = Date.now();
+  return {
+    id: `custom-${stamp}`,
+    sku: `SKU-${stamp}`,
+    nombre: `Producto ${new Date(stamp).toLocaleTimeString('es-CR', { hour12: false })}`,
+    categoria: 'accesorio',
+    descripcion: '',
+    precio: 0,
+    impuesto: 0.13,
+    tamano: '',
+    estiloFoto: '',
+    stock: 50,
+    garantia: '',
+    cuentaCobro: '',
+    cuentasPago: []
+  };
+};
+
 interface InventoryPageProps {
   companyId: 'oz' | 'pt' | 'ds';
 }
@@ -149,24 +168,8 @@ function InventoryPage({ companyId }: InventoryPageProps) {
   };
 
   const addRow = () => {
-    setDraftProducts((prev) => [
-      ...prev,
-      {
-        id: `custom-${Date.now()}`,
-        sku: '',
-        nombre: '',
-        categoria: 'accesorio',
-        descripcion: '',
-        precio: 0,
-        impuesto: 0.13,
-        tamano: '',
-        estiloFoto: '',
-        stock: 50,
-        garantia: '',
-        cuentaCobro: '',
-        cuentasPago: []
-      }
-    ]);
+    setDraftProducts((prev) => [...prev, buildDraftRow()]);
+    setMessage('Fila nueva creada con valores mínimos válidos. Puedes editar SKU y nombre antes de guardar.');
   };
 
   const handleSaveSheet = async () => {
