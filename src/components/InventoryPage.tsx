@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Minus, MoreVertical, Plus, Save, Search, Upload } from 'lucide-react';
 import { catalogProducts, CatalogCategory, CatalogProduct } from '../data/catalog';
-import { flushInventoryOfflineQueue, getInventoryProducts, saveInventoryProducts, subscribeInventory, uploadTextureFile } from '../services/inventoryService';
+import { getInventoryProducts, saveInventoryProducts, subscribeInventory, uploadTextureFile } from '../services/inventoryService';
 import { toUserMessage } from '../utils/appError';
 
 type InventoryStatus = 'optimo' | 'bajo' | 'agotado';
@@ -55,7 +55,7 @@ function InventoryPage({ companyId }: InventoryPageProps) {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState(new Date(0).toISOString());
-  const [syncState, setSyncState] = useState<'confirmado' | 'pendiente' | 'sincronizando' | 'conflicto'>('confirmado');
+  const [syncState, setSyncState] = useState<'confirmado' | 'sincronizando' | 'conflicto'>('confirmado');
   const [conflictRows, setConflictRows] = useState<Array<{ id: string; db_updated_at: string; db_version: number }>>([]);
 
   const loadInventory = useCallback(async () => {
@@ -86,19 +86,7 @@ function InventoryPage({ companyId }: InventoryPageProps) {
       setSyncState('confirmado');
     });
 
-    const onReconnect = () => {
-      setSyncState('sincronizando');
-      void flushInventoryOfflineQueue().finally(() => {
-        void loadInventory();
-        setSyncState('confirmado');
-      });
-    };
-
-    window.addEventListener('online', onReconnect);
-    void flushInventoryOfflineQueue();
-
     return () => {
-      window.removeEventListener('online', onReconnect);
       if (channel) channel.unsubscribe();
     };
   }, [companyId, loadInventory]);
@@ -203,11 +191,6 @@ function InventoryPage({ companyId }: InventoryPageProps) {
         return;
       }
 
-      if (result.status === 'queued-offline') {
-        setSyncState('pendiente');
-        setMessage('Sin red: cambios en cola local pendientes de sincronización.');
-        return;
-      }
 
       await loadInventory();
       setConflictRows([]);
