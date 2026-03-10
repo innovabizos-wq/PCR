@@ -1,12 +1,11 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
-import { catalogProducts, CatalogProduct } from '../data/catalog';
+import { CatalogProduct } from '../data/catalog';
 import { supabase } from '../lib/supabase';
 import { CompanyId } from '../types/company';
 import { trackEvent } from './telemetryService';
 import { validateInventoryProduct } from '../domain/inventory/validation';
 
 const TABLE_NAME = 'inventory_products';
-const OFFLINE_QUEUE_KEY = 'pcr.inventory.commands.v1';
 
 interface InventoryRow {
   id: string;
@@ -28,15 +27,6 @@ interface InventoryRow {
   version?: number;
 }
 
-interface PendingInventoryCommand {
-  idempotencyKey: string;
-  expectedUpdatedAt: string;
-  companyId: CompanyId;
-  products: CatalogProduct[];
-  attempts: number;
-  createdAt: string;
-}
-
 export interface SaveInventoryInput {
   products: CatalogProduct[];
   companyId: CompanyId;
@@ -45,7 +35,7 @@ export interface SaveInventoryInput {
 }
 
 export interface SaveInventoryResult {
-  status: 'ok' | 'conflict' | 'queued-offline';
+  status: 'ok' | 'conflict';
   conflicts?: Array<{ id: string; db_updated_at: string; db_version: number }>;
   idempotencyKey: string;
 }
@@ -86,26 +76,9 @@ const fromRow = (row: InventoryRow): CatalogProduct => ({
 
 const generateIdempotencyKey = () => `inv-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
-const readOfflineQueue = (): PendingInventoryCommand[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(OFFLINE_QUEUE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as PendingInventoryCommand[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-};
-
-const persistOfflineQueue = (queue: PendingInventoryCommand[]) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue.slice(-25)));
-};
-
-
 export async function getInventoryProducts(companyId: CompanyId): Promise<{ products: CatalogProduct[]; snapshotUpdatedAt: string }> {
   if (!supabase) {
-    return { products: catalogProducts, snapshotUpdatedAt: new Date().toISOString() };
+    throw new Error('Inventario no disponible: conexión a base de datos no configurada.');
   }
 
   const { data, error } = await supabase
@@ -128,21 +101,12 @@ export async function saveInventoryProducts(input: SaveInventoryInput): Promise<
   const idempotencyKey = input.idempotencyKey ?? generateIdempotencyKey();
   input.products.forEach(validateInventoryProduct);
 
-  if (!supabase || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-    const queued: PendingInventoryCommand = {
-      idempotencyKey,
-      companyId: input.companyId,
-      expectedUpdatedAt: input.expectedUpdatedAt,
-      products: input.products,
-      attempts: 0,
-      createdAt: new Date().toISOString()
-    };
-    persistOfflineQueue([...readOfflineQueue(), queued]);
-    await trackEvent('inventory_command_queued_offline', {
-      module: 'inventory',
-      metadata: { companyId: input.companyId, idempotencyKey }
-    });
-    return { status: 'queued-offline', idempotencyKey };
+  if (!supabase) {
+    throw new Error('Inventario no disponible: conexión a base de datos no configurada.');
+  }
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Sin conexión: no se guardaron cambios fuera de línea.');
   }
 
   const payload = input.products.map((item) => toRow(item, input.companyId));
@@ -173,36 +137,6 @@ export async function saveInventoryProducts(input: SaveInventoryInput): Promise<
   return { status: 'ok', idempotencyKey };
 }
 
-export async function flushInventoryOfflineQueue(): Promise<void> {
-  const queue = readOfflineQueue();
-  if (!supabase || queue.length === 0) return;
-
-  const keep: PendingInventoryCommand[] = [];
-
-  for (const command of queue) {
-    try {
-      const waitMs = Math.min(1000 * 2 ** command.attempts, 15000);
-      if (command.attempts > 0) {
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-      }
-
-      const result = await saveInventoryProducts({
-        companyId: command.companyId,
-        products: command.products,
-        expectedUpdatedAt: command.expectedUpdatedAt,
-        idempotencyKey: command.idempotencyKey
-      });
-
-      if (result.status === 'conflict') {
-        keep.push({ ...command, attempts: command.attempts + 1 });
-      }
-    } catch {
-      keep.push({ ...command, attempts: command.attempts + 1 });
-    }
-  }
-
-  persistOfflineQueue(keep);
-}
 
 export function subscribeInventory(companyId: CompanyId, onInvalidate: () => void): RealtimeChannel | null {
   if (!supabase) return null;
