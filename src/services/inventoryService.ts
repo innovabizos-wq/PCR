@@ -1,6 +1,5 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { catalogProducts, CatalogProduct } from '../data/catalog';
-import { getCatalogProducts } from './catalogService';
 import { supabase } from '../lib/supabase';
 import { CompanyId } from '../types/company';
 import { trackEvent } from './telemetryService';
@@ -105,12 +104,6 @@ const persistOfflineQueue = (queue: PendingInventoryCommand[]) => {
 
 
 export async function getInventoryProducts(companyId: CompanyId): Promise<{ products: CatalogProduct[]; snapshotUpdatedAt: string }> {
-  const products = await getCatalogProducts();
-
-  if (products.length > 0 && !supabase) {
-    return { products, snapshotUpdatedAt: new Date().toISOString() };
-  }
-
   if (!supabase) {
     return { products: catalogProducts, snapshotUpdatedAt: new Date().toISOString() };
   }
@@ -124,7 +117,7 @@ export async function getInventoryProducts(companyId: CompanyId): Promise<{ prod
   if (error) throw error;
 
   if (!data || data.length === 0) {
-    return { products: catalogProducts, snapshotUpdatedAt: new Date().toISOString() };
+    return { products: [], snapshotUpdatedAt: new Date().toISOString() };
   }
 
   const snapshotUpdatedAt = (data[0] as InventoryRow).updated_at ?? new Date().toISOString();
