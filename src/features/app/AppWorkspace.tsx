@@ -20,17 +20,14 @@ import { calculatePvcQuote, pvcPalette, PvcColor } from '../../utils/pvcCalculat
 import { calculateZacateQuote } from '../../utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from '../../utils/wpcCalculations';
 import { generateAndStoreQuoteNumber } from '../../services/quoteNumberService';
+import { generateGlobalNumber, listStoredByKind, saveStoredQuote } from '../../services/quoteStoreService';
 import { getInventoryProducts } from '../../services/inventoryService';
 import { toUserMessage } from '../../utils/appError';
 import { getCatalogProducts } from '../../services/catalogService';
-import { loadCalculatorDraft, saveCalculatorDraft } from '../../services/calculatorDraftService';
 import { trackEvent } from '../../services/telemetryService';
 import { useAuth } from '../auth/AuthProvider';
 import { useCompany } from '../company/CompanyContext';
 import BillingWorkspaceView from './views/BillingWorkspaceView';
-import InventoryWorkspaceView from './views/InventoryWorkspaceView';
-import DispatchWorkspaceView from './views/DispatchWorkspaceView';
-import AdminWorkspaceView from './views/AdminWorkspaceView';
 import CalculatorWorkspaceView from './views/CalculatorWorkspaceView';
 import CalculatorSummaryPanel from './views/CalculatorSummaryPanel';
 import { calculatorModuleCards } from './views/calculatorModuleCards';
@@ -66,35 +63,34 @@ const DEFAULT_POLY_TEXTURES: Record<SheetColor, string> = {
 
 
 export default function AppWorkspace() {
-  const initialDraft = loadCalculatorDraft();
   const [activePage, setActivePage] = useState<MainPage>('calculator');
-  const [activeModule, setActiveModule] = useState<MaterialModule>(initialDraft?.activeModule ?? 'pvc');
-  const [widthInput, setWidthInput] = useState(initialDraft?.widthInput ?? '0');
-  const [heightInput, setHeightInput] = useState(initialDraft?.heightInput ?? '0');
-  const [result, setResult] = useState<CalculationResult | null>(initialDraft?.result ?? null);
-  const [editedMaterials, setEditedMaterials] = useState<Material[] | null>(initialDraft?.editedMaterials ?? null);
+  const [activeModule, setActiveModule] = useState<MaterialModule>('pvc');
+  const [widthInput, setWidthInput] = useState('0');
+  const [heightInput, setHeightInput] = useState('0');
+  const [result, setResult] = useState<CalculationResult | null>(null);
+  const [editedMaterials, setEditedMaterials] = useState<Material[] | null>(null);
   const [error, setError] = useState('');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [billingDraft, setBillingDraft] = useState<BillingDraft | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const { logout, can } = useAuth();
-  const { activeCompanyId, availableCompanies, setActiveCompanyId } = useCompany();
+  const { activeCompanyId } = useCompany();
 
-  const [polyColor, setPolyColor] = useState<SheetColor>((initialDraft?.polyColor as SheetColor) ?? 'blanco');
+  const [polyColor, setPolyColor] = useState<SheetColor>('blanco');
   const [polyTextures, setPolyTextures] = useState<Record<SheetColor, string>>(DEFAULT_POLY_TEXTURES);
-  const [brand, setBrand] = useState<SheetBrand>((initialDraft?.brand as SheetBrand) ?? 'KLAR');
-  const [thickness, setThickness] = useState<SheetThickness>((initialDraft?.thickness as SheetThickness) ?? '8mm');
+  const [brand, setBrand] = useState<SheetBrand>('KLAR');
+  const [thickness, setThickness] = useState<SheetThickness>('8mm');
 
-  const [pvcColor, setPvcColor] = useState<PvcColor>((initialDraft?.pvcColor as PvcColor) ?? 'rojo');
-  const [includeBorders, setIncludeBorders] = useState(initialDraft?.includeBorders ?? false);
+  const [pvcColor, setPvcColor] = useState<PvcColor>('rojo');
+  const [includeBorders, setIncludeBorders] = useState(false);
 
-  const [wpcType, setWpcType] = useState<WpcPanelType>((initialDraft?.wpcType as WpcPanelType) ?? 'interior');
-  const [wpcUseRecuts, setWpcUseRecuts] = useState(initialDraft?.wpcUseRecuts ?? true);
-  const [wpcVerticalInstall, setWpcVerticalInstall] = useState(initialDraft?.wpcVerticalInstall ?? true);
-  const [wpcTone, setWpcTone] = useState<WpcTone>((initialDraft?.wpcTone as WpcTone) ?? 'teca');
+  const [wpcType, setWpcType] = useState<WpcPanelType>('interior');
+  const [wpcUseRecuts, setWpcUseRecuts] = useState(true);
+  const [wpcVerticalInstall, setWpcVerticalInstall] = useState(true);
+  const [wpcTone, setWpcTone] = useState<WpcTone>('teca');
 
-  const [zacateHeight, setZacateHeight] = useState<ZacateHeight>((initialDraft?.zacateHeight as ZacateHeight) ?? '35mm');
+  const [zacateHeight, setZacateHeight] = useState<ZacateHeight>('35mm');
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>('activo');
 
   const centerInnerRef = useRef<HTMLDivElement | null>(null);
@@ -258,42 +254,6 @@ export default function AppWorkspace() {
     zacateHeight
   ]);
 
-  useEffect(() => {
-    saveCalculatorDraft({
-      activeModule,
-      widthInput,
-      heightInput,
-      includeBorders,
-      brand,
-      thickness,
-      polyColor,
-      pvcColor,
-      wpcType,
-      wpcUseRecuts,
-      wpcVerticalInstall,
-      wpcTone,
-      zacateHeight,
-      result,
-      editedMaterials
-    });
-  }, [
-    activeModule,
-    widthInput,
-    heightInput,
-    includeBorders,
-    brand,
-    thickness,
-    polyColor,
-    pvcColor,
-    wpcType,
-    wpcUseRecuts,
-    wpcVerticalInstall,
-    wpcTone,
-    zacateHeight,
-    result,
-    editedMaterials
-  ]);
-
   // ✅ versión corta (main)
   const displayMaterials = useMemo(() => editedMaterials ?? result?.materials ?? [], [editedMaterials, result]);
 
@@ -312,6 +272,22 @@ export default function AppWorkspace() {
 
   // ✅ BUG FIX: solo una vez
   const roundedEditedTotal = Number.isInteger(editedTotal) ? editedTotal : Math.ceil(editedTotal);
+
+
+  const allowedPages: MainPage[] = ['calculator', 'billing', 'quotes'];
+  const blockedMessage = 'No tienes acceso a esta función, contacta a soporte para acceder a mas funciones.';
+
+  const handlePageNavigation = (page: MainPage) => {
+    if (!allowedPages.includes(page)) {
+      pushToast('error', blockedMessage);
+      return;
+    }
+    setActivePage(page);
+  };
+
+  const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'cotización de Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m · precio ${formatCurrency(editedTotal)}`;
+
+  const [quotesRefreshKey, setQuotesRefreshKey] = useState(0);
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
   const previewAspect = Math.max(0.45, Math.min(1.9, height / Math.max(width, 0.01)));
@@ -382,8 +358,7 @@ export default function AppWorkspace() {
         materials: displayMaterials,
         sheetType: resolvedSheetType,
         sheetThickness: resolvedSheetThickness,
-        sheetColor: resolvedSheetColor,
-        companyId: activeCompanyId as 'oz' | 'pt' | 'ds'
+        sheetColor: resolvedSheetColor
       });
       setBillingDraft({
         category: isPvc ? 'pvc' : isZacate ? 'zacate' : isWpc ? 'wpc' : 'policarbonato',
@@ -431,10 +406,20 @@ export default function AppWorkspace() {
     }
   };
 
-  const shareWhatsApp = () => {
-    const title = isPvc ? 'Piso PVC' : isZacate ? 'Zacate' : isWpc ? 'Tablilla WPC' : 'Policarbonato';
-    const message = `Cotización ${title}\n\nDimensiones: ${height}m x ${width}m\nTotal: ${formatCurrency(editedTotal)}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  const createDraft = () => {
+    if (!result) return;
+    const draftNumber = generateGlobalNumber('draft');
+    saveStoredQuote({
+      number: draftNumber,
+      kind: 'draft',
+      module: activeModule,
+      width: result.width,
+      height: result.height,
+      total: editedTotal,
+      materials: displayMaterials
+    });
+    pushToast('success', `Borrador ${draftNumber} creado correctamente.`);
+    setQuotesRefreshKey((prev) => prev + 1);
   };
 
   const handleModuleChange = (module: MaterialModule) => {
@@ -513,7 +498,7 @@ export default function AppWorkspace() {
             <span className="text-sm font-medium">Dashboard</span>
           </a>
           <button
-            onClick={() => setActivePage('calculator')}
+            onClick={() => handlePageNavigation('calculator')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
               isCalculatorPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -522,7 +507,7 @@ export default function AppWorkspace() {
             <span className="text-sm font-bold">Calculadora</span>
           </button>
           <button
-            onClick={() => setActivePage('billing')}
+            onClick={() => handlePageNavigation('billing')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
               isBillingPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -531,7 +516,7 @@ export default function AppWorkspace() {
             <span className="text-sm font-bold">Facturación</span>
           </button>
           <button
-            onClick={() => setActivePage('inventory')}
+            onClick={() => handlePageNavigation('inventory')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
               isInventoryPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -540,7 +525,7 @@ export default function AppWorkspace() {
             <span className="text-sm font-medium">Inventario</span>
           </button>
           <button
-            onClick={() => setActivePage('dispatch')}
+            onClick={() => handlePageNavigation('dispatch')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
               isDispatchPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -549,7 +534,7 @@ export default function AppWorkspace() {
             <span className="text-sm font-medium">Despacho</span>
           </button>
           <button
-            onClick={() => setActivePage('admin')}
+            onClick={() => handlePageNavigation('admin')}
             className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
               isAdminPage ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
             }`}
@@ -557,10 +542,15 @@ export default function AppWorkspace() {
             <Settings className="h-5 w-5" />
             <span className="text-sm font-medium">Administración</span>
           </button>
-          <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100">
+          <button
+            onClick={() => setActivePage('quotes')}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+              activePage === 'quotes' ? 'bg-cyan-500 text-white' : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
             <FileText className="h-5 w-5" />
             <span className="text-sm font-medium">Cotizaciones</span>
-          </a>
+          </button>
           <a href="#" className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:bg-gray-100">
             <Users className="h-5 w-5" />
             <span className="text-sm font-medium">Clientes</span>
@@ -570,7 +560,7 @@ export default function AppWorkspace() {
           <div className="mb-3 flex items-center gap-2">
             <CircleUserRound className="h-8 w-8 text-slate-600" />
             <div>
-              <p className="text-sm font-semibold text-slate-800">Laura Gómez</p>
+              <p className="text-sm font-semibold text-slate-800">Administrador</p>
               <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${STATUS_META[employeeStatus].tone}`}>
                 {STATUS_META[employeeStatus].label}
               </span>
@@ -636,24 +626,51 @@ export default function AppWorkspace() {
                   </h1>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500">Empresa activa</span>
-                <select value={activeCompanyId} onChange={(e) => setActiveCompanyId(e.target.value)} className="h-9 rounded-lg border border-gray-300 px-2 text-sm">
-                  {availableCompanies.map((company) => (<option key={company.id} value={company.id}>{company.legalName}</option>))}
-                </select>
-              </div>
             </div>
           </header>
 
           <div className={isCalculatorPage || isDispatchPage ? 'space-y-4 px-6 py-6' : 'h-full overflow-y-auto space-y-4 px-6 py-6'}>
             {isBillingPage ? (
-              <BillingWorkspaceView logoUrl={logoUrl} initialQuote={billingDraft} />
+              <BillingWorkspaceView
+                logoUrl={logoUrl}
+                initialQuote={billingDraft}
+                onSaveQuote={(quote) => {
+                  const quoteNumber = generateGlobalNumber('quote');
+                  saveStoredQuote({
+                    number: quoteNumber,
+                    kind: 'quote',
+                    module: quote.category,
+                    width: quote.width,
+                    height: quote.height,
+                    total: quote.materials.reduce((sum, item) => sum + (item.total ?? item.quantity * item.unitPrice), 0),
+                    materials: quote.materials
+                  });
+                  pushToast('success', `Cotización ${quoteNumber} guardada.`);
+                  setQuotesRefreshKey((prev) => prev + 1);
+                }}
+                availableDrafts={listStoredByKind('draft')}
+              />
+            ) : activePage === 'quotes' ? (
+              <div key={quotesRefreshKey} className="space-y-6"> 
+                <section className="rounded-xl border border-gray-200 bg-white p-4">
+                  <h3 className="mb-3 text-base font-bold text-slate-800">Cotizaciones guardadas</h3>
+                  {listStoredByKind('quote').length === 0 ? <p className="text-sm text-slate-500">No hay cotizaciones guardadas.</p> : (
+                    <ul className="space-y-2">{listStoredByKind('quote').map((item) => (<li key={item.id} className="rounded border border-slate-200 p-3 text-sm"><strong>{item.number}</strong> · {item.module} · {item.width.toFixed(2)}m x {item.height.toFixed(2)}m · {formatCurrency(item.total)}</li>))}</ul>
+                  )}
+                </section>
+                <section className="rounded-xl border border-gray-200 bg-white p-4">
+                  <h3 className="mb-3 text-base font-bold text-slate-800">Borradores</h3>
+                  {listStoredByKind('draft').length === 0 ? <p className="text-sm text-slate-500">No hay borradores guardados.</p> : (
+                    <ul className="space-y-2">{listStoredByKind('draft').map((item) => (<li key={item.id} className="rounded border border-slate-200 p-3 text-sm"><strong>{item.number}</strong> · {item.module} · {item.width.toFixed(2)}m x {item.height.toFixed(2)}m · {formatCurrency(item.total)}</li>))}</ul>
+                  )}
+                </section>
+              </div>
             ) : isInventoryPage ? (
-              <InventoryWorkspaceView companyId={activeCompanyId as 'oz' | 'pt' | 'ds'} />
-) : isDispatchPage ? (
-              <DispatchWorkspaceView />
+              <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{blockedMessage}</div>
+            ) : isDispatchPage ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{blockedMessage}</div>
             ) : isAdminPage ? (
-              <AdminWorkspaceView />
+              <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">{blockedMessage}</div>
             ) : (
               <CalculatorWorkspaceView
                 moduleCards={calculatorModuleCards}
@@ -730,10 +747,11 @@ export default function AppWorkspace() {
               materials: displayMaterials,
               quoteNumber: undefined
             });
-            setActivePage('billing');
+            handlePageNavigation('billing');
           }}
           onExportPdf={exportPDF}
-          onShareWhatsApp={shareWhatsApp}
+          shortWhatsAppText={shortWhatsAppText}
+          onCreateDraft={createDraft}
         />
       )}
     </div>
