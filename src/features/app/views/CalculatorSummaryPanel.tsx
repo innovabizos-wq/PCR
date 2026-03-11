@@ -1,6 +1,5 @@
-import { Calculator, FileDown, FileText, Share2 } from 'lucide-react';
+import { Calculator, FileDown, FileText, Save } from 'lucide-react';
 import { Material } from '../../../types/calculator';
-import { formatCurrency } from '../../../utils/calculations';
 
 interface PanelBreakdown {
   aLabel: string;
@@ -20,7 +19,8 @@ interface CalculatorSummaryPanelProps {
   resultReady: boolean;
   onCreateQuote: () => void;
   onExportPdf: () => void;
-  onShareWhatsApp: () => void;
+  onCreateDraft: () => void;
+  shortWhatsAppText: string;
 }
 
 export default function CalculatorSummaryPanel({
@@ -34,7 +34,8 @@ export default function CalculatorSummaryPanel({
   resultReady,
   onCreateQuote,
   onExportPdf,
-  onShareWhatsApp
+  onCreateDraft,
+  shortWhatsAppText
 }: CalculatorSummaryPanelProps) {
   return (
     <aside className="h-screen p-4 pt-7">
@@ -50,13 +51,13 @@ export default function CalculatorSummaryPanel({
           <div className="mt-6 space-y-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-slate-300">{panelBreakdown.aLabel}</span>
-              <span className="font-bold text-cyan-300">{formatCurrency(panelBreakdown.aValue)}</span>
+              <span className="font-bold text-cyan-300">₡{panelBreakdown.aValue.toLocaleString('es-CR')}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-slate-300">{panelBreakdown.bLabel}</span>
               <span className="font-bold text-cyan-300">
                 {panelBreakdown.bValue
-                  ? formatCurrency(panelBreakdown.bValue)
+                  ? `₡${panelBreakdown.bValue.toLocaleString('es-CR')}`
                   : isZacate
                     ? `${(width * height).toFixed(2)}m² → ${(displayMaterials[0]?.quantity || 0).toFixed(2)}m²`
                     : isWpc
@@ -72,6 +73,7 @@ export default function CalculatorSummaryPanel({
             <div className="rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-700 p-6 text-center shadow-2xl">
               <p className="mb-2 text-xs font-bold uppercase tracking-widest text-cyan-100">Total estimado</p>
               <p className="text-4xl font-black tracking-tight">₡{roundedEditedTotal.toLocaleString('es-CR')}</p>
+              <p className="mt-2 text-[11px] text-cyan-100">{shortWhatsAppText}</p>
             </div>
 
             <button
@@ -92,11 +94,11 @@ export default function CalculatorSummaryPanel({
             </button>
 
             <button
-              onClick={onShareWhatsApp}
+              onClick={onCreateDraft}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-green-500 text-sm font-bold uppercase tracking-wider text-white hover:bg-green-600"
             >
-              <Share2 className="h-5 w-5" />
-              Compartir cálculo
+              <Save className="h-5 w-5" />
+              Crear borrador
             </button>
           </div>
         </div>
