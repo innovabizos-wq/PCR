@@ -23,7 +23,6 @@ import { generateAndStoreQuoteNumber } from '../../services/quoteNumberService';
 import { generateGlobalNumber, listStoredByKind, saveStoredQuote } from '../../services/quoteStoreService';
 import { getInventoryProducts } from '../../services/inventoryService';
 import { toUserMessage } from '../../utils/appError';
-import { getCatalogProducts } from '../../services/catalogService';
 import { trackEvent } from '../../services/telemetryService';
 import { useAuth } from '../auth/AuthProvider';
 import { useCompany } from '../company/CompanyContext';
@@ -117,11 +116,6 @@ export default function AppWorkspace() {
     window.setTimeout(() => setToasts((prev) => prev.filter((item) => item.id !== id)), 3500);
   };
 
-  useEffect(() => {
-    getCatalogProducts().catch((err) => {
-      console.warn('No se pudo precargar catálogo versionado.', err);
-    });
-  }, []);
 
   useEffect(() => {
     trackEvent('page.view', { page: activePage, module: activeModule });

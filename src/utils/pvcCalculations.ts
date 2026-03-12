@@ -1,4 +1,3 @@
-import { getCatalogPrice } from '../data/catalog';
 import { CalculationResult, Material, SheetColor } from '../types/calculator';
 
 export interface PvcCalculationMeta {
@@ -11,9 +10,9 @@ export interface PvcCalculationMeta {
 }
 
 const PVC_TILE_SIDE_M = 0.4;
-const PVC_TILE_UNIT_PRICE = getCatalogPrice('pvc-floor', 2000);
-const PVC_BORDER_PRICE = getCatalogPrice('pvc-borders', 800);
-const PVC_CORNER_PRICE = getCatalogPrice('pvc-corners', 200);
+const PVC_TILE_UNIT_PRICE = 2000;
+const PVC_BORDER_PRICE = 800;
+const PVC_CORNER_PRICE = 200;
 
 export function calculatePvcQuote(widthInput: number, heightInput: number, includeBorders: boolean): { result: CalculationResult; meta: PvcCalculationMeta } {
   const width = Number(widthInput);
