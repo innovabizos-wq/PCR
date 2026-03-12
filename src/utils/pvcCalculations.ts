@@ -45,7 +45,7 @@ export function calculatePvcQuote(widthInput: number, heightInput: number, inclu
       quantity: pieces,
       unitPrice: PVC_TILE_UNIT_PRICE,
       total: floorTotal,
-      iva: 0.13
+      iva: 0
     }
   ];
 
@@ -59,7 +59,7 @@ export function calculatePvcQuote(widthInput: number, heightInput: number, inclu
         quantity: borders,
         unitPrice: PVC_BORDER_PRICE,
         total: bordersTotal,
-        iva: 0.13
+        iva: 0
       },
       {
         id: 'pvc-corners',
@@ -69,7 +69,7 @@ export function calculatePvcQuote(widthInput: number, heightInput: number, inclu
         quantity: corners,
         unitPrice: PVC_CORNER_PRICE,
         total: cornersTotal,
-        iva: 0.13
+        iva: 0
       }
     );
   }

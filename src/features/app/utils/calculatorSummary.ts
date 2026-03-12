@@ -12,8 +12,8 @@ const materialLineTotal = (material: Material): number => {
   const qty = material.quantity ?? 0;
   const unit = material.unitPrice ?? 0;
   const iva = material.iva ?? 0;
-  const discount = Math.max(0, material.discount ?? 0);
-  return Math.max(0, qty * unit * (1 + iva) - discount);
+  const discountPct = Math.min(100, Math.max(0, material.discount ?? 0));
+  return Math.max(0, qty * unit * (1 + iva) * (1 - discountPct / 100));
 };
 
 export const getMaterialLineTotal = materialLineTotal;

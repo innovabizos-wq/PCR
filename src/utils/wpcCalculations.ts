@@ -61,9 +61,14 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
     adjustedPieces = Math.max(adjustedPieces, rows);
   }
 
-  const cutRest = PANEL_HEIGHT_M - (height % PANEL_HEIGHT_M || PANEL_HEIGHT_M);
-  if (options.useRecuts && cutRest > 0 && cutRest < (options.minRecutCm / 100)) {
-    adjustedPieces += Math.ceil(rows * 0.15);
+  if (options.useRecuts) {
+    const runLength = installVertical ? height : effectiveWidth;
+    const leftoverPerRow = Math.max(0, piecesPerRow * PANEL_HEIGHT_M - runLength);
+    const recutThreshold = options.minRecutCm / 100;
+    if (leftoverPerRow >= recutThreshold) {
+      const recoveredPieces = Math.floor((leftoverPerRow * rows) / PANEL_HEIGHT_M);
+      adjustedPieces = Math.max(basePieces, minimumPiecesByRows - recoveredPieces);
+    }
   }
 
   if (options.frontSpecific) {
@@ -85,7 +90,7 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
       quantity: adjustedPieces,
       unitPrice: config.unitPrice,
       total,
-      iva: 0.13
+      iva: 0
     },
     {
       id: 'wpc-base',
@@ -95,7 +100,7 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
       quantity: basePieces,
       unitPrice: 0,
       total: 0,
-      iva: 0.13
+      iva: 0
     }
   ];
 
