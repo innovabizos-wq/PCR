@@ -6,7 +6,8 @@ import ProformaPreview, { ProformaData } from '../../../components/ProformaPrevi
 import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } from '../../../types/calculator';
 import { pvcPalette, PvcColor } from '../../../utils/pvcCalculations';
 import { WpcPanelType } from '../../../utils/wpcCalculations';
-import { MaterialModule, WpcTone, ZacateHeight } from '../types';
+import { MaterialModule, ZacateHeight } from '../types';
+import { WPC_PANEL_LENGTH_M, WPC_TEXTURES, WPC_TONES_BY_TYPE, WPC_TONE_LABELS, WpcTone } from '../wpcConfig';
 
 interface CalculatorWorkspaceViewProps {
   moduleCards: { id: MaterialModule; label: string; icon: ReactNode }[];
@@ -197,9 +198,11 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
               <div>
                 <label className="mb-1 block text-xs font-bold uppercase text-gray-500">Acabado</label>
                 <select value={wpcTone} onChange={(e) => setWpcTone(e.target.value as WpcTone)} className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-semibold">
-                  <option value="teca">Teca</option>
-                  <option value="nogal">Nogal</option>
-                  <option value="grafito">Grafito</option>
+                  {WPC_TONES_BY_TYPE[wpcType].map((tone) => (
+                    <option key={tone} value={tone}>
+                      {WPC_TONE_LABELS[tone]}
+                    </option>
+                  ))}
                 </select>
               </div>
               <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
@@ -314,18 +317,35 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
                           className={`relative border border-black/20 ${wpcHorizontal ? 'w-full' : 'h-full'}`}
                           style={{
                             flex: '1 1 0%',
-                            background: wpcTone === 'nogal' ? 'linear-gradient(90deg, #5d371d, #784723, #5f391e)' : wpcTone === 'grafito' ? 'linear-gradient(90deg, #4f5560, #646c78, #4f5560)' : 'linear-gradient(90deg, #b57945, #cc8b53, #b47843)'
+                            backgroundImage: `url(${import.meta.env.BASE_URL}${WPC_TEXTURES[wpcTone]})`,
+                            backgroundRepeat: 'repeat',
+                            backgroundSize: wpcHorizontal ? 'auto 100%' : '100% auto',
+                            backgroundPosition: 'center'
                           }}
                         >
                           <div
                             className="absolute inset-0"
                             style={{
                               backgroundImage: wpcHorizontal
-                                ? 'repeating-linear-gradient(0deg, rgba(34,20,10,0.24) 0 2px, rgba(255,255,255,0.05) 2px 4px, rgba(0,0,0,0) 4px 11px)'
-                                : 'repeating-linear-gradient(90deg, rgba(34,20,10,0.24) 0 2px, rgba(255,255,255,0.05) 2px 4px, rgba(0,0,0,0) 4px 11px)',
-                              opacity: 0.5
+                                ? 'repeating-linear-gradient(0deg, rgba(20,20,20,0.28) 0 2px, rgba(255,255,255,0.07) 2px 4px, rgba(0,0,0,0) 4px 12px)'
+                                : 'repeating-linear-gradient(90deg, rgba(20,20,20,0.28) 0 2px, rgba(255,255,255,0.07) 2px 4px, rgba(0,0,0,0) 4px 12px)',
+                              opacity: 0.38
                             }}
                           />
+
+                          {wpcUseRecuts && result.numSheets > 0 && (
+                            <div
+                              className="pointer-events-none absolute inset-0"
+                              style={{
+                                backgroundImage: wpcHorizontal
+                                  ? `repeating-linear-gradient(90deg, rgba(220,38,38,0.50) 0 2px, rgba(0,0,0,0) 2px ${(WPC_PANEL_LENGTH_M / Math.max(1, result.numSheets)) * 100}%)`
+                                  : `repeating-linear-gradient(180deg, rgba(220,38,38,0.50) 0 2px, rgba(0,0,0,0) 2px ${(WPC_PANEL_LENGTH_M / Math.max(1, result.numSheets)) * 100}%)`,
+                                mixBlendMode: 'multiply',
+                                opacity: 0.45
+                              }}
+                              title="Visualización de recortes optimizados"
+                            />
+                          )}
 
                           {Array.from({ length: 4 }).map((_, channel) => (
                             <div

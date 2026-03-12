@@ -32,7 +32,8 @@ import CalculatorSummaryPanel from './views/CalculatorSummaryPanel';
 import { calculatorModuleCards } from './views/calculatorModuleCards';
 import { ensureHtml2Canvas, ensureJsPdf } from './services/exportService';
 import { getMaterialLineTotal, getPanelBreakdown } from './utils/calculatorSummary';
-import { BillingDraft, EmployeeStatus, MainPage, MaterialModule, WpcTone, ZacateHeight } from './types';
+import { BillingDraft, EmployeeStatus, MainPage, MaterialModule, ZacateHeight } from './types';
+import { WPC_TEXTURES, WPC_TONES_BY_TYPE, WpcTone } from './wpcConfig';
 
 const parseMetric = (raw: string): number => {
   const sanitized = raw.replace(',', '.').trim();
@@ -87,7 +88,7 @@ export default function AppWorkspace() {
   const [wpcType, setWpcType] = useState<WpcPanelType>('interior');
   const [wpcUseRecuts, setWpcUseRecuts] = useState(true);
   const [wpcVerticalInstall, setWpcVerticalInstall] = useState(true);
-  const [wpcTone, setWpcTone] = useState<WpcTone>('teca');
+  const [wpcTone, setWpcTone] = useState<WpcTone>('negro');
 
   const [zacateHeight, setZacateHeight] = useState<ZacateHeight>('35mm');
   const [employeeStatus, setEmployeeStatus] = useState<EmployeeStatus>('activo');
@@ -228,6 +229,13 @@ export default function AppWorkspace() {
 
     loadTextures();
   }, [activeCompanyId]);
+
+  useEffect(() => {
+    const allowedTones = WPC_TONES_BY_TYPE[wpcType];
+    if (!allowedTones.includes(wpcTone)) {
+      setWpcTone(allowedTones[0]);
+    }
+  }, [wpcType, wpcTone]);
 
   useEffect(() => {
     calculateResults();
@@ -465,7 +473,7 @@ export default function AppWorkspace() {
         linear-gradient(155deg, rgba(16,56,22,0.58), rgba(56,110,42,0.36)),
         url('${toAssetUrl('textures/zacate-grass.svg')}')`
       : isWpc
-        ? `linear-gradient(160deg, ${wpcTone === 'nogal' ? '#6b4423' : wpcTone === 'grafito' ? '#4b5563' : '#b67946'}, #2f2418)`
+        ? `url(${toAssetUrl(WPC_TEXTURES[wpcTone])})`
         : `url(${polyTextures[polyColor]})`;
 
   return (
