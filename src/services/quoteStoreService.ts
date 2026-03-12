@@ -13,6 +13,8 @@ export interface StoredQuote {
   number: string;
   kind: 'quote' | 'draft';
   module: string;
+  clientName?: string;
+  phone?: string;
   width: number;
   height: number;
   total: number;

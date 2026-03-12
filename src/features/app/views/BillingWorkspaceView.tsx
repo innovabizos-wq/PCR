@@ -16,6 +16,8 @@ interface BillingWorkspaceViewProps {
     width: number;
     height: number;
     materials: Material[];
+    clientName: string;
+    phone: string;
   }) => void;
   availableDrafts: StoredQuote[];
 }
