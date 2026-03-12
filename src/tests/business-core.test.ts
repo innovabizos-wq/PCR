@@ -6,6 +6,7 @@ import { calculateZacateQuote } from '../utils/zacateCalculations';
 import { calculateProformaTotals } from '../domain/quotes/proformaTotals';
 import { getQuoteCounterScope, nextQuoteConsecutive } from '../domain/quotes/quoteNumbering';
 import { validateInventoryProduct } from '../domain/inventory/validation';
+import { getMaterialLineTotal } from '../features/app/utils/calculatorSummary';
 
 const runCase = (name: string, callback: () => void): void => {
   try {
@@ -31,6 +32,9 @@ runCase('PVC calcula piezas y bordes según perímetro', () => {
   assert.equal(quote.meta.borders, 16);
   assert.equal(quote.meta.corners, 4);
   assert.equal(quote.result.total, quote.meta.total);
+  assert.equal(quote.result.materials[0]?.iva, 0);
+  assert.equal(quote.result.materials[1]?.iva, 0);
+  assert.equal(quote.result.materials[2]?.iva, 0);
 });
 
 runCase('WPC respeta orientación y produce piezas ajustadas', () => {
@@ -47,6 +51,7 @@ runCase('WPC respeta orientación y produce piezas ajustadas', () => {
   assert.equal(quote.meta.orientation, 'vertical');
   assert.ok(quote.meta.adjustedPieces >= quote.meta.basePieces);
   assert.equal(quote.result.numSheets, quote.meta.adjustedPieces);
+  assert.equal(quote.result.materials[0]?.iva, 0);
 });
 
 runCase('zacate factura en múltiplos del ancho de rollo', () => {
@@ -67,6 +72,21 @@ runCase('proforma aplica descuento e IVA con redondeo monetario', () => {
   assert.equal(totals.netSubtotal, 3199.99);
   assert.equal(totals.iva, 416);
   assert.equal(totals.total, 3615.99);
+});
+
+
+runCase('resumen aplica descuento como porcentaje en materiales', () => {
+  const total = getMaterialLineTotal({
+    id: 'm1',
+    name: 'Material',
+    quantity: 2,
+    unitPrice: 1000,
+    total: 2000,
+    iva: 0.13,
+    discount: 10
+  });
+
+  assert.equal(total, 2034);
 });
 
 runCase('numeración separa consecutivos por empresa y categoría', () => {
