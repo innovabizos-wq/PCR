@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { ChevronDown, Plus, Search } from 'lucide-react';
 import ProformaPreview, { ProformaData } from './ProformaPreview';
 import { catalogProducts } from '../data/catalog';
 import { Material } from '../types/calculator';
@@ -19,14 +19,24 @@ interface BillingPageProps {
     width: number;
     height: number;
     materials: Material[];
+    clientName: string;
+    phone: string;
   }) => void;
   availableDrafts?: StoredQuote[];
 }
 
 type BillingProduct = 'policarbonato' | 'pvc' | 'wpc' | 'zacate';
 
+interface ClientFormState {
+  clientName: string;
+  clientId: string;
+  phone: string;
+  clientAddress: string;
+}
+
 const buildProforma = (
   product: BillingProduct,
+  clientData: ClientFormState,
   initialQuote?: BillingPageProps['initialQuote'],
   loadedDrafts: StoredQuote[] = []
 ): ProformaData => {
@@ -36,10 +46,10 @@ const buildProforma = (
     return {
       quoteNumber: initialQuote?.quoteNumber ?? 'Cliente N/A',
       date: new Date().toLocaleDateString('es-CR'),
-      clientName: 'Cliente',
-      clientId: 'Cliente N/A',
-      clientAddress: 'Cliente N/A',
-      phone: 'Cliente N/A',
+      clientName: clientData.clientName,
+      clientId: clientData.clientId,
+      clientAddress: clientData.clientAddress,
+      phone: clientData.phone,
       deliveryNote: `Combinación de ${loadedDrafts.length} borradores`,
       lines: loadedDrafts.flatMap((draft) =>
         draft.materials.map((line, index) => ({
@@ -63,10 +73,10 @@ const buildProforma = (
     return {
       quoteNumber: initialQuote.quoteNumber ?? 'Cliente N/A',
       date: new Date().toLocaleDateString('es-CR'),
-      clientName: 'Cliente',
-      clientId: 'Cliente N/A',
-      clientAddress: 'Cliente N/A',
-      phone: 'Cliente N/A',
+      clientName: clientData.clientName,
+      clientId: clientData.clientId,
+      clientAddress: clientData.clientAddress,
+      phone: clientData.phone,
       deliveryNote: `${product.toUpperCase()} · ${initialQuote.width.toFixed(2)}m x ${initialQuote.height.toFixed(2)}m`,
       lines: initialQuote.materials.map((line, index) => ({
         id: line.id || `line-${index}`,
@@ -87,10 +97,10 @@ const buildProforma = (
   return {
     quoteNumber: 'Cliente N/A',
     date: new Date().toLocaleDateString('es-CR'),
-    clientName: 'Cliente',
-    clientId: 'Cliente N/A',
-    clientAddress: 'Cliente N/A',
-    phone: 'Cliente N/A',
+    clientName: clientData.clientName,
+    clientId: clientData.clientId,
+    clientAddress: clientData.clientAddress,
+    phone: clientData.phone,
     deliveryNote: 'Entrega sujeta a coordinación con bodega',
     lines: [
       {
@@ -113,6 +123,13 @@ const buildProforma = (
 export default function BillingPage({ logoUrl, initialQuote, onSaveQuote, availableDrafts = [] }: BillingPageProps) {
   const [selectedProduct, setSelectedProduct] = useState<BillingProduct>(initialQuote?.category ?? 'policarbonato');
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([]);
+  const [showDraftSelector, setShowDraftSelector] = useState(false);
+  const [clientData, setClientData] = useState<ClientFormState>({
+    clientName: initialQuote ? 'Cliente' : 'Cliente',
+    clientId: 'Cliente N/A',
+    phone: 'Cliente N/A',
+    clientAddress: 'Cliente N/A'
+  });
 
   const loadedDrafts = useMemo(
     () => availableDrafts.filter((draft) => selectedDraftIds.includes(draft.id)),
@@ -120,8 +137,8 @@ export default function BillingPage({ logoUrl, initialQuote, onSaveQuote, availa
   );
 
   const selectedProforma = useMemo(
-    () => buildProforma(selectedProduct, initialQuote, loadedDrafts),
-    [selectedProduct, initialQuote, loadedDrafts]
+    () => buildProforma(selectedProduct, clientData, initialQuote, loadedDrafts),
+    [selectedProduct, clientData, initialQuote, loadedDrafts]
   );
 
   return (
@@ -137,17 +154,27 @@ export default function BillingPage({ logoUrl, initialQuote, onSaveQuote, availa
             <button
               onClick={() => {
                 if (!initialQuote || !onSaveQuote) return;
-                onSaveQuote(initialQuote);
+                onSaveQuote({
+                  ...initialQuote,
+                  clientName: clientData.clientName,
+                  phone: clientData.phone
+                });
               }}
               className="rounded-lg border border-cyan-500 px-4 py-2 text-sm font-bold text-cyan-700"
             >
               Guardar cotización
             </button>
-            <button className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700">Cargar borradores</button>
+            <button
+              onClick={() => setShowDraftSelector((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700"
+            >
+              Cargar borradores
+              <ChevronDown className={`h-4 w-4 transition-transform ${showDraftSelector ? 'rotate-180' : ''}`} />
+            </button>
           </div>
         </div>
 
-        {availableDrafts.length > 0 && (
+        {showDraftSelector && availableDrafts.length > 0 && (
           <div className="mb-4 rounded-lg border border-slate-200 p-3">
             <p className="mb-2 text-xs font-bold uppercase text-slate-600">Borradores disponibles</p>
             <div className="grid gap-2 md:grid-cols-2">
@@ -160,6 +187,13 @@ export default function BillingPage({ logoUrl, initialQuote, onSaveQuote, availa
                       setSelectedDraftIds((prev) =>
                         e.target.checked ? [...prev, draft.id] : prev.filter((id) => id !== draft.id)
                       );
+                      if (e.target.checked) {
+                        setClientData((prev) => ({
+                          ...prev,
+                          clientName: draft.clientName ?? prev.clientName,
+                          phone: draft.phone ?? prev.phone
+                        }));
+                      }
                     }}
                   />
                   <span>{draft.number} · {draft.module} · ₡{draft.total.toLocaleString('es-CR')}</span>
@@ -170,9 +204,24 @@ export default function BillingPage({ logoUrl, initialQuote, onSaveQuote, availa
         )}
 
         <div className="mb-4 grid gap-3 md:grid-cols-4">
-          <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Nombre cliente" defaultValue="Cliente" />
-          <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Identificación" defaultValue={selectedProforma.clientId} />
-          <input className="rounded-lg border border-gray-300 px-3 py-2 text-sm" placeholder="Teléfono" defaultValue={selectedProforma.phone} />
+          <input
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Nombre cliente"
+            value={clientData.clientName}
+            onChange={(e) => setClientData((prev) => ({ ...prev, clientName: e.target.value }))}
+          />
+          <input
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Identificación"
+            value={clientData.clientId}
+            onChange={(e) => setClientData((prev) => ({ ...prev, clientId: e.target.value }))}
+          />
+          <input
+            className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            placeholder="Teléfono"
+            value={clientData.phone}
+            onChange={(e) => setClientData((prev) => ({ ...prev, phone: e.target.value }))}
+          />
           <select value={selectedProduct} onChange={(e) => setSelectedProduct(e.target.value as BillingProduct)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-slate-700">
             <option value="policarbonato">Policarbonato</option>
             <option value="pvc">Piso PVC</option>

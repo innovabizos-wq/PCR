@@ -11,16 +11,17 @@ import {
   Package,
   Settings,
   Users,
+  X,
 } from 'lucide-react';
 import ToastStack, { ToastItem } from '../../components/feedback/ToastStack';
-import { ProformaData } from '../../components/ProformaPreview';
+import ProformaPreview, { ProformaData } from '../../components/ProformaPreview';
 import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } from '../../types/calculator';
 import { calculateQuote, formatCurrency } from '../../utils/calculations';
 import { calculatePvcQuote, pvcPalette, PvcColor } from '../../utils/pvcCalculations';
 import { calculateZacateQuote } from '../../utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from '../../utils/wpcCalculations';
 import { generateAndStoreQuoteNumber } from '../../services/quoteNumberService';
-import { generateGlobalNumber, listStoredByKind, saveStoredQuote } from '../../services/quoteStoreService';
+import { generateGlobalNumber, listStoredByKind, saveStoredQuote, StoredQuote } from '../../services/quoteStoreService';
 import { getInventoryProducts } from '../../services/inventoryService';
 import { toUserMessage } from '../../utils/appError';
 import { trackEvent } from '../../services/telemetryService';
@@ -61,6 +62,28 @@ const DEFAULT_POLY_TEXTURES: Record<SheetColor, string> = {
   humo: toAssetUrl('textures/Humo.png')
 };
 
+const buildStoredQuoteProforma = (quote: StoredQuote): ProformaData => ({
+  quoteNumber: quote.number,
+  date: new Date(quote.createdAt).toLocaleDateString('es-CR'),
+  clientName: quote.clientName ?? 'Cliente',
+  clientId: 'Cliente N/A',
+  clientAddress: 'Cliente N/A',
+  phone: quote.phone ?? 'Cliente N/A',
+  deliveryNote: `${quote.module.toUpperCase()} · ${quote.width.toFixed(2)}m x ${quote.height.toFixed(2)}m`,
+  lines: quote.materials.map((line, index) => ({
+    id: line.id ?? `${quote.id}-${index}`,
+    description: line.name,
+    details: line.description,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    discountPct: 0
+  })),
+  bankAccounts: [
+    { label: 'Banco', value: 'Cuenta N/A' },
+    { label: 'SINPE', value: 'N/A' }
+  ],
+  warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.'
+});
 
 export default function AppWorkspace() {
   const [activePage, setActivePage] = useState<MainPage>('calculator');
@@ -73,6 +96,8 @@ export default function AppWorkspace() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [billingDraft, setBillingDraft] = useState<BillingDraft | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quotesRefreshKey, setQuotesRefreshKey] = useState(0);
+  const [selectedStoredItem, setSelectedStoredItem] = useState<StoredQuote | null>(null);
 
   const { logout, can } = useAuth();
   const { activeCompanyId } = useCompany();
@@ -289,7 +314,6 @@ export default function AppWorkspace() {
 
   const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'cotización de Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m · precio ${formatCurrency(editedTotal)}`;
 
-  const [quotesRefreshKey, setQuotesRefreshKey] = useState(0);
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
   const previewAspect = Math.max(0.45, Math.min(1.9, height / Math.max(width, 0.01)));
@@ -642,6 +666,8 @@ export default function AppWorkspace() {
                     number: quoteNumber,
                     kind: 'quote',
                     module: quote.category,
+                    clientName: quote.clientName,
+                    phone: quote.phone,
                     width: quote.width,
                     height: quote.height,
                     total: quote.materials.reduce((sum, item) => sum + (item.total ?? item.quantity * item.unitPrice), 0),
@@ -655,15 +681,15 @@ export default function AppWorkspace() {
             ) : activePage === 'quotes' ? (
               <div key={quotesRefreshKey} className="space-y-6"> 
                 <section className="rounded-xl border border-gray-200 bg-white p-4">
-                  <h3 className="mb-3 text-base font-bold text-slate-800">Cotizaciones guardadas</h3>
+                  <h3 className="mb-1 text-base font-bold text-slate-800">Cotizaciones guardadas</h3><p className="mb-3 text-xs text-slate-500">Doble clic para ver vista previa.</p>
                   {listStoredByKind('quote').length === 0 ? <p className="text-sm text-slate-500">No hay cotizaciones guardadas.</p> : (
-                    <ul className="space-y-2">{listStoredByKind('quote').map((item) => (<li key={item.id} className="rounded border border-slate-200 p-3 text-sm"><strong>{item.number}</strong> · {item.module} · {item.width.toFixed(2)}m x {item.height.toFixed(2)}m · {formatCurrency(item.total)}</li>))}</ul>
+                    <ul className="space-y-2">{listStoredByKind('quote').map((item) => (<li key={item.id} onDoubleClick={() => setSelectedStoredItem(item)} className="cursor-pointer rounded border border-slate-200 p-3 text-sm transition hover:border-cyan-300 hover:bg-cyan-50"><strong>{item.number}</strong> · {item.module} · {item.width.toFixed(2)}m x {item.height.toFixed(2)}m · {formatCurrency(item.total)}</li>))}</ul>
                   )}
                 </section>
                 <section className="rounded-xl border border-gray-200 bg-white p-4">
-                  <h3 className="mb-3 text-base font-bold text-slate-800">Borradores</h3>
+                  <h3 className="mb-1 text-base font-bold text-slate-800">Borradores</h3><p className="mb-3 text-xs text-slate-500">Doble clic para ver vista previa.</p>
                   {listStoredByKind('draft').length === 0 ? <p className="text-sm text-slate-500">No hay borradores guardados.</p> : (
-                    <ul className="space-y-2">{listStoredByKind('draft').map((item) => (<li key={item.id} className="rounded border border-slate-200 p-3 text-sm"><strong>{item.number}</strong> · {item.module} · {item.width.toFixed(2)}m x {item.height.toFixed(2)}m · {formatCurrency(item.total)}</li>))}</ul>
+                    <ul className="space-y-2">{listStoredByKind('draft').map((item) => (<li key={item.id} onDoubleClick={() => setSelectedStoredItem(item)} className="cursor-pointer rounded border border-slate-200 p-3 text-sm transition hover:border-cyan-300 hover:bg-cyan-50"><strong>{item.number}</strong> · {item.module} · {item.width.toFixed(2)}m x {item.height.toFixed(2)}m · {formatCurrency(item.total)}</li>))}</ul>
                   )}
                 </section>
               </div>
@@ -729,6 +755,27 @@ export default function AppWorkspace() {
           </div>
         </div>
       </main>
+
+
+
+      {selectedStoredItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" onClick={() => setSelectedStoredItem(null)}>
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white p-4 shadow-2xl md:p-6" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-[#00011a]">Vista previa · {selectedStoredItem.number}</h3>
+                <p className="text-xs text-slate-500">{selectedStoredItem.kind === 'quote' ? 'Cotización guardada' : 'Borrador'} · {selectedStoredItem.module}</p>
+              </div>
+              <button className="rounded-lg border border-slate-200 p-2 text-slate-600 hover:bg-slate-100" onClick={() => setSelectedStoredItem(null)}>
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="overflow-auto rounded-lg bg-slate-100 p-3">
+              <ProformaPreview logoUrl={logoUrl} data={buildStoredQuoteProforma(selectedStoredItem)} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {isCalculatorPage && (
         <CalculatorSummaryPanel
