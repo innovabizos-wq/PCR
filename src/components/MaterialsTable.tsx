@@ -111,8 +111,8 @@ export default function MaterialsTable({
   };
   const commitEditDiscount = (idx: number) => {
     const parsed = parseFloat(editingDiscountValue.replace(',', '.'));
-    const amount = isNaN(parsed) ? 0 : Math.max(0, parsed);
-    updateRow(idx, { discount: amount === 0 ? null : amount });
+    const pct = isNaN(parsed) ? 0 : Math.min(100, Math.max(0, parsed));
+    updateRow(idx, { discount: pct === 0 ? null : pct });
     setEditingDiscountRow(null);
     setEditingDiscountValue('0');
   };
@@ -207,7 +207,7 @@ export default function MaterialsTable({
               <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Cantidad</th>
               <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Unitario (sin IVA)</th>
               <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">IVA</th>
-              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Descuento</th>
+              <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Descuento (%)</th>
               <th className="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase">Total con IVA</th>
             </tr>
           </thead>
@@ -219,8 +219,8 @@ export default function MaterialsTable({
               const ivaDecimal = material.iva ?? 0.13;
               const totalSinIVA = unit * qty;
               const totalConIVA = totalSinIVA * (1 + ivaDecimal);
-              const discount = Math.max(0, material.discount ?? 0);
-              const totalFinal = Math.max(0, totalConIVA - discount);
+              const discountPct = Math.min(100, Math.max(0, material.discount ?? 0));
+              const totalFinal = Math.max(0, totalConIVA * (1 - discountPct / 100));
 
               return (
                 <tr key={material.id ?? idx} className="group hover:bg-gray-50 transition-colors relative">
@@ -298,7 +298,7 @@ export default function MaterialsTable({
                   <td
                     className="px-6 py-4 text-right align-top"
                     onDoubleClick={() => startEditDiscount(idx)}
-                    title="Doble click para editar descuento"
+                    title="Doble click para editar descuento (%)"
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === 'Enter') startEditDiscount(idx); }}
@@ -320,7 +320,7 @@ export default function MaterialsTable({
                         }}
                       />
                     ) : (
-                      <div className="font-semibold text-gray-800">{material.discount ? formatCurrency(material.discount) : 'Vacío'}</div>
+                      <div className="font-semibold text-gray-800">{material.discount ? `${material.discount}%` : '0%'}</div>
                     )}
                   </td>
 

@@ -192,7 +192,7 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
                 <select value={wpcType} onChange={(e) => setWpcType(e.target.value as WpcPanelType)} className="h-10 rounded-lg border border-gray-300 px-3 text-sm font-semibold">
                   <option value="interior">Interior</option>
                   <option value="exterior">Exterior</option>
-                  <option value="coextruido">Coextruida</option>
+                  <option value="coextruido">Coextruido</option>
                 </select>
               </div>
               <div>
@@ -209,6 +209,7 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
                 <input type="checkbox" checked={wpcUseRecuts} onChange={(e) => setWpcUseRecuts(e.target.checked)} />
                 Optimizar con recortes
               </label>
+              <span className="text-xs text-gray-500">Aprovecha sobrantes de corte de al menos 15 cm para reducir piezas estimadas.</span>
               <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
                 <input type="checkbox" checked={wpcVerticalInstall} onChange={(e) => setWpcVerticalInstall(e.target.checked)} />
                 Instalar vertical (desactivar = horizontal lateral)
