@@ -1,4 +1,3 @@
-import { getCatalogPrice } from '../data/catalog';
 import { CalculationResult, Material } from '../types/calculator';
 
 export interface ZacateCalculationMeta {
@@ -10,7 +9,7 @@ export interface ZacateCalculationMeta {
 }
 
 const ROLL_WIDTH_M = 2;
-const PRICE_PER_M2 = getCatalogPrice('zacate-35mm', 6500);
+const PRICE_PER_M2 = 6500;
 
 export function calculateZacateQuote(lengthInput: number, widthInput: number): { result: CalculationResult; meta: ZacateCalculationMeta } {
   const length = Number(lengthInput);

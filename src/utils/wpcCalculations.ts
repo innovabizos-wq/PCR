@@ -1,4 +1,3 @@
-import { getCatalogPrice } from '../data/catalog';
 import { CalculationResult, Material } from '../types/calculator';
 
 export type WpcPanelType = 'interior' | 'exterior' | 'coextruido';
@@ -27,9 +26,9 @@ export interface WpcCalculationMeta {
 const PANEL_HEIGHT_M = 2.9;
 
 const WPC_PANEL_CONFIG: Record<WpcPanelType, { width: number; unitPrice: number; label: string }> = {
-  interior: { width: 0.16, unitPrice: getCatalogPrice('wpc-interior', 3990), label: 'Panel WPC interior 16cm x 2.90m' },
-  exterior: { width: 0.22, unitPrice: getCatalogPrice('wpc-exterior', 9990), label: 'Panel WPC exterior 22cm x 2.90m' },
-  coextruido: { width: 0.22, unitPrice: getCatalogPrice('wpc-coextruido', 14000), label: 'Panel WPC coextruido 22cm x 2.90m' }
+  interior: { width: 0.16, unitPrice: 3990, label: 'Panel WPC interior 16cm x 2.90m' },
+  exterior: { width: 0.22, unitPrice: 9990, label: 'Panel WPC exterior 22cm x 2.90m' },
+  coextruido: { width: 0.22, unitPrice: 14000, label: 'Panel WPC coextruido 22cm x 2.90m' }
 };
 
 export function calculateWpcQuote(widthInput: number, heightInput: number, options: WpcCalculationOptions): { result: CalculationResult; meta: WpcCalculationMeta } {
