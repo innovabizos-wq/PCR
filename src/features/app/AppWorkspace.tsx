@@ -16,7 +16,7 @@ import {
 import ToastStack, { ToastItem } from '../../components/feedback/ToastStack';
 import ProformaPreview, { ProformaData } from '../../components/ProformaPreview';
 import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } from '../../types/calculator';
-import { calculateQuote, formatCurrency } from '../../utils/calculations';
+import { calculateQuote } from '../../utils/calculations';
 import { calculatePvcQuote, pvcPalette, PvcColor } from '../../utils/pvcCalculations';
 import { calculateZacateQuote } from '../../utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from '../../utils/wpcCalculations';
@@ -312,7 +312,8 @@ export default function AppWorkspace() {
     setActivePage(page);
   };
 
-  const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m${activeModule === 'policarbonato' ? '' : ` · precio ${formatCurrency(editedTotal)}`}`;
+  const moduleShortLabel = activeModule === 'pvc' ? 'Piso PVC' : activeModule === 'zacate' ? 'Zacate artificial' : activeModule === 'wpc' ? 'Tablilla WPC' : 'Policarbonato';
+  const shortWhatsAppText = `${moduleShortLabel} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m`;
 
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
