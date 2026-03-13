@@ -2,6 +2,14 @@ import { createContext, PropsWithChildren, useContext, useEffect, useMemo, useSt
 import { canPerform, AuthenticatedUser, PermissionAction, PermissionModule } from '../../domain/auth/permissions';
 import { getCurrentSessionUser, onAuthStateChanged, signIn, signOut } from './authService';
 
+const TEMPORARY_AUTH_BYPASS_ENABLED = true;
+const TEMPORARY_BYPASS_USER: AuthenticatedUser = {
+  id: 'temporary-local-user',
+  email: 'temporal@local.dev',
+  role: 'super_admin',
+  companyIds: ['company-pcr', 'company-zentro']
+};
+
 interface AuthContextValue {
   user: AuthenticatedUser | null;
   loading: boolean;
@@ -14,10 +22,16 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const SESSION_RESOLUTION_TIMEOUT_MS = 8000;
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthenticatedUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AuthenticatedUser | null>(TEMPORARY_AUTH_BYPASS_ENABLED ? TEMPORARY_BYPASS_USER : null);
+  const [loading, setLoading] = useState(!TEMPORARY_AUTH_BYPASS_ENABLED);
 
   useEffect(() => {
+    if (TEMPORARY_AUTH_BYPASS_ENABLED) {
+      setLoading(false);
+      setUser(TEMPORARY_BYPASS_USER);
+      return;
+    }
+
     let active = true;
 
     const resolveInitialSession = async () => {
@@ -67,10 +81,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       user,
       loading,
       login: async (email, password) => {
+        if (TEMPORARY_AUTH_BYPASS_ENABLED) {
+          setUser(TEMPORARY_BYPASS_USER);
+          return;
+        }
+
         const nextUser = await signIn(email, password);
         setUser(nextUser);
       },
       logout: async () => {
+        if (TEMPORARY_AUTH_BYPASS_ENABLED) {
+          setUser(TEMPORARY_BYPASS_USER);
+          return;
+        }
+
         await signOut();
         setUser(null);
       },
