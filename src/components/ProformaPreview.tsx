@@ -21,6 +21,7 @@ export interface ProformaData {
   lines: ProformaLine[];
   bankAccounts: { label: string; value: string }[];
   warranty: string;
+  companyHeaderLines?: string[];
 }
 
 interface ProformaPreviewProps {
@@ -30,6 +31,11 @@ interface ProformaPreviewProps {
 
 export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps) {
   const { subtotal, discountTotal, netSubtotal, iva, total } = calculateProformaTotals(data.lines);
+  const companyHeaderLines = data.companyHeaderLines ?? [
+    'Sistemas de Construcción Unificados S.A.',
+    'Parque Empresarial del Este, San José',
+    'ventas@policarbonatocr.com · +506 2222-3333'
+  ];
 
   return (
     <div className="w-full max-w-[780px] overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 text-[11px] text-slate-700 shadow-2xl">
@@ -37,9 +43,11 @@ export default function ProformaPreview({ logoUrl, data }: ProformaPreviewProps)
         <div className="flex items-start justify-between">
           <div>
             <img src={logoUrl} alt="Logo" className="mb-3 h-10 w-auto max-w-[220px] object-contain" />
-            <p className="font-semibold">Sistemas de Construcción Unificados S.A.</p>
-            <p className="text-slate-200">Parque Empresarial del Este, San José</p>
-            <p className="text-slate-200">ventas@policarbonatocr.com · +506 2222-3333</p>
+            {companyHeaderLines.map((line, index) => (
+              <p key={`${line}-${index}`} className={index === 0 ? 'font-semibold' : 'text-slate-200'}>
+                {line}
+              </p>
+            ))}
           </div>
           <div className="text-right">
             <p className="text-[28px] font-black uppercase tracking-wide">Proforma</p>
