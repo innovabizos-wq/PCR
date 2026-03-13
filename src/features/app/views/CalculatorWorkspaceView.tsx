@@ -163,7 +163,7 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
               </div>
               <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
                 <input type="checkbox" checked={includeBorders} onChange={(e) => setIncludeBorders(e.target.checked)} />
-                Incluir bordes (manual)
+                Incluir bordes
               </label>
             </>
           )}
@@ -212,7 +212,7 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
               <span className="text-xs text-gray-500">Aprovecha sobrantes de corte de al menos 15 cm para reducir piezas estimadas.</span>
               <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
                 <input type="checkbox" checked={wpcVerticalInstall} onChange={(e) => setWpcVerticalInstall(e.target.checked)} />
-                Instalar vertical (desactivar = horizontal lateral)
+                Instalar Horizontal!
               </label>
             </>
           )}

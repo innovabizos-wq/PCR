@@ -102,12 +102,12 @@ export default function AppWorkspace() {
   const { logout, can } = useAuth();
   const { activeCompanyId } = useCompany();
 
-  const [polyColor, setPolyColor] = useState<SheetColor>('blanco');
+  const [polyColor, setPolyColor] = useState<SheetColor>('humo');
   const [polyTextures, setPolyTextures] = useState<Record<SheetColor, string>>(DEFAULT_POLY_TEXTURES);
   const [brand, setBrand] = useState<SheetBrand>('KLAR');
   const [thickness, setThickness] = useState<SheetThickness>('8mm');
 
-  const [pvcColor, setPvcColor] = useState<PvcColor>('rojo');
+  const [pvcColor, setPvcColor] = useState<PvcColor>('negro');
   const [includeBorders, setIncludeBorders] = useState(false);
 
   const [wpcType, setWpcType] = useState<WpcPanelType>('interior');
@@ -302,7 +302,7 @@ export default function AppWorkspace() {
 
 
   const allowedPages: MainPage[] = ['calculator', 'billing', 'quotes'];
-  const blockedMessage = 'No tienes acceso a esta función, contacta a soporte para acceder a mas funciones.';
+  const blockedMessage = 'Función en desarrollo, contacta a soporte para mas información.';
 
   const handlePageNavigation = (page: MainPage) => {
     if (!allowedPages.includes(page)) {
@@ -312,7 +312,7 @@ export default function AppWorkspace() {
     setActivePage(page);
   };
 
-  const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'cotización de Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m · precio ${formatCurrency(editedTotal)}`;
+  const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m${activeModule === 'policarbonato' ? '' : ` · precio ${formatCurrency(editedTotal)}`}`;
 
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
