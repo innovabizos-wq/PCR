@@ -28,6 +28,40 @@ interface BillingPageProps {
 
 type BillingProduct = 'policarbonato' | 'pvc' | 'wpc' | 'zacate';
 
+
+const COMPANY_HEADER_LINES: Record<BillingProduct, string[]> = {
+  policarbonato: [
+    'IMPORTADORA SOLIS CR LTDA',
+    'Ced. Juridica: 3-102-841084',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ],
+  pvc: [
+    'IMPORTADORA DE PARTES TORRES LTDA',
+    'Ced. Juridica: 3-102-900947',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ],
+  wpc: [
+    'IMPORTADORA DE PARTES TORRES LTDA',
+    'Ced. Juridica: 3-102-900947',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ],
+  zacate: [
+    'OSCAR ALFONSO SALAS ÁVILA',
+    'Ced. Juridica: 2-0601-0259',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ]
+};
+
+
+const toBillingProduct = (module: string): BillingProduct => {
+  if (module === 'policarbonato' || module === 'pvc' || module === 'wpc' || module === 'zacate') return module;
+  return 'policarbonato';
+};
+
 interface ClientFormState {
   clientName: string;
   clientId: string;
@@ -43,6 +77,8 @@ const buildProforma = (
   initialQuote?: BillingPageProps['initialQuote'],
   loadedDrafts: StoredQuote[] = []
 ): ProformaData => {
+  const headerProduct: BillingProduct = loadedDrafts.length ? toBillingProduct(loadedDrafts[0].module) : product;
+
   if (loadedDrafts.length) {
     return {
       quoteNumber,
@@ -66,7 +102,8 @@ const buildProforma = (
         { label: 'Banco', value: 'Cuenta N/A' },
         { label: 'SINPE', value: 'N/A' }
       ],
-      warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.'
+      warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.',
+      companyHeaderLines: COMPANY_HEADER_LINES[headerProduct]
     };
   }
 
@@ -85,7 +122,8 @@ const buildProforma = (
       { label: 'Banco', value: 'Cuenta N/A' },
       { label: 'SINPE', value: 'N/A' }
     ],
-    warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.'
+    warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.',
+    companyHeaderLines: COMPANY_HEADER_LINES[headerProduct]
   };
 };
 

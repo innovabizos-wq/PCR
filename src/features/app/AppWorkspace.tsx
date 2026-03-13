@@ -53,6 +53,40 @@ const STATUS_META: Record<EmployeeStatus, { label: string; tone: string }> = {
 
 const toAssetUrl = (path: string): string => `${import.meta.env.BASE_URL}${path}`;
 
+
+const COMPANY_HEADER_LINES: Record<MaterialModule, string[]> = {
+  policarbonato: [
+    'IMPORTADORA SOLIS CR LTDA',
+    'Ced. Juridica: 3-102-841084',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ],
+  pvc: [
+    'IMPORTADORA DE PARTES TORRES LTDA',
+    'Ced. Juridica: 3-102-900947',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ],
+  wpc: [
+    'IMPORTADORA DE PARTES TORRES LTDA',
+    'Ced. Juridica: 3-102-900947',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ],
+  zacate: [
+    'OSCAR ALFONSO SALAS ÁVILA',
+    'Ced. Juridica: 2-0601-0259',
+    'www.policarbonatocr.com',
+    'Teléfono: 2430 2121'
+  ]
+};
+
+
+const toMaterialModule = (module: string): MaterialModule => {
+  if (module === 'policarbonato' || module === 'pvc' || module === 'wpc' || module === 'zacate') return module;
+  return 'policarbonato';
+};
+
 const DEFAULT_POLY_TEXTURES: Record<SheetColor, string> = {
   transparente: toAssetUrl('textures/transparente.png'),
   bronce: toAssetUrl('textures/BRONCE.png'),
@@ -82,7 +116,8 @@ const buildStoredQuoteProforma = (quote: StoredQuote): ProformaData => ({
     { label: 'Banco', value: 'Cuenta N/A' },
     { label: 'SINPE', value: 'N/A' }
   ],
-  warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.'
+  warranty: 'Garantía sujeta al producto y condiciones comerciales vigentes.',
+  companyHeaderLines: COMPANY_HEADER_LINES[toMaterialModule(quote.module)]
 });
 
 export default function AppWorkspace() {
@@ -372,9 +407,10 @@ export default function AppWorkspace() {
         { label: 'Banco Nacional', value: '100-01-123-456789' },
         { label: 'SINPE Móvil', value: '+506 8888-8888' }
       ],
-      warranty: 'Garantía sujeta al producto, instalación recomendada y condiciones comerciales vigentes.'
+      warranty: 'Garantía sujeta al producto, instalación recomendada y condiciones comerciales vigentes.',
+      companyHeaderLines: COMPANY_HEADER_LINES[activeModule]
     };
-  }, [displayMaterials, height, isPvc, isWpc, isZacate, width]);
+  }, [activeModule, displayMaterials, height, isPvc, isWpc, isZacate, width]);
 
   const exportPDF = async () => {
     if (!result || !proformaExportRef.current) return;
