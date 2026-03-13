@@ -16,7 +16,7 @@ import {
 import ToastStack, { ToastItem } from '../../components/feedback/ToastStack';
 import ProformaPreview, { ProformaData } from '../../components/ProformaPreview';
 import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } from '../../types/calculator';
-import { calculateQuote } from '../../utils/calculations';
+import { calculateQuote, formatCurrency } from '../../utils/calculations';
 import { calculatePvcQuote, pvcPalette, PvcColor } from '../../utils/pvcCalculations';
 import { calculateZacateQuote } from '../../utils/zacateCalculations';
 import { calculateWpcQuote, WpcPanelType } from '../../utils/wpcCalculations';
