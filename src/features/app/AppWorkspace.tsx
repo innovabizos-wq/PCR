@@ -312,7 +312,8 @@ export default function AppWorkspace() {
     setActivePage(page);
   };
 
-  const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m${activeModule === 'policarbonato' ? '' : ` · precio ${formatCurrency(editedTotal)}`}`;
+  const moduleShortLabel = activeModule === 'pvc' ? 'Piso PVC' : activeModule === 'zacate' ? 'Zacate artificial' : activeModule === 'wpc' ? 'Tablilla WPC' : 'Policarbonato';
+  const shortWhatsAppText = `${moduleShortLabel} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m`;
 
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
