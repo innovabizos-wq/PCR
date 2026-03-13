@@ -7,7 +7,7 @@ import { CalculationResult, Material, SheetBrand, SheetColor, SheetThickness } f
 import { pvcPalette, PvcColor } from '../../../utils/pvcCalculations';
 import { WpcPanelType } from '../../../utils/wpcCalculations';
 import { MaterialModule, ZacateHeight } from '../types';
-import { WPC_PANEL_LENGTH_M, WPC_TEXTURES, WPC_TONES_BY_TYPE, WPC_TONE_LABELS, WpcTone } from '../wpcConfig';
+import { getWpcTexture, WPC_PANEL_LENGTH_M, WPC_TONES_BY_TYPE, WPC_TONE_LABELS, WpcTone } from '../wpcConfig';
 
 interface CalculatorWorkspaceViewProps {
   moduleCards: { id: MaterialModule; label: string; icon: ReactNode }[];
@@ -317,7 +317,7 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
                           className={`relative border border-black/20 ${wpcHorizontal ? 'w-full' : 'h-full'}`}
                           style={{
                             flex: '1 1 0%',
-                            backgroundImage: `url(${import.meta.env.BASE_URL}${WPC_TEXTURES[wpcTone]})`,
+                            backgroundImage: `url(${import.meta.env.BASE_URL}${getWpcTexture(wpcType, wpcTone)})`,
                             backgroundRepeat: 'repeat',
                             backgroundSize: wpcHorizontal ? 'auto 100%' : '100% auto',
                             backgroundPosition: 'center'

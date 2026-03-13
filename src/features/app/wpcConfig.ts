@@ -16,12 +16,34 @@ export const WPC_TONES_BY_TYPE: Record<WpcPanelType, WpcTone[]> = {
   coextruido: ['cafe-madera']
 };
 
-export const WPC_TEXTURES: Record<WpcTone, string> = {
-  negro: 'textures/wpc-interior-negro.jpg',
-  caoba: 'textures/wpc-caoba.jpg',
-  chocolate: 'textures/wpc-interior-chocolate.jpg',
-  natural: 'textures/wpc-natural.jpg',
-  'cafe-madera': 'textures/wpc-coextruida-cafe-madera.jpg'
+export const WPC_TEXTURES: Record<WpcPanelType, Partial<Record<WpcTone, string>>> = {
+  interior: {
+    negro: 'textures/wpc-interior-negro.jpg',
+    caoba: 'textures/wpc-interior-caoba.jpg',
+    chocolate: 'textures/wpc-interior-chocolate.jpg',
+    natural: 'textures/wpc-interior-natural.jpg'
+  },
+  exterior: {
+    negro: 'textures/wpc-exterior-negro.jpg',
+    caoba: 'textures/wpc-exterior-caoba.jpg',
+    natural: 'textures/wpc-exterior-natural.jpg'
+  },
+  coextruido: {
+    'cafe-madera': 'textures/wpc-coextruido-cafe-madera.jpg'
+  }
+};
+
+export const getWpcTexture = (panelType: WpcPanelType, tone: WpcTone): string => {
+  const direct = WPC_TEXTURES[panelType][tone];
+  if (direct) return direct;
+
+  const fallbackType = WPC_TONES_BY_TYPE[panelType][0];
+  if (fallbackType) {
+    const fallback = WPC_TEXTURES[panelType][fallbackType];
+    if (fallback) return fallback;
+  }
+
+  return 'textures/wpc-interior-negro.jpg';
 };
 
 export const WPC_PANEL_LENGTH_M = 2.9;
