@@ -34,7 +34,7 @@ import { calculatorModuleCards } from './views/calculatorModuleCards';
 import { ensureHtml2Canvas, ensureJsPdf } from './services/exportService';
 import { getMaterialLineTotal, getPanelBreakdown } from './utils/calculatorSummary';
 import { BillingDraft, EmployeeStatus, MainPage, MaterialModule, ZacateHeight } from './types';
-import { WPC_TEXTURES, WPC_TONES_BY_TYPE, WpcTone } from './wpcConfig';
+import { getWpcTexture, WPC_TONES_BY_TYPE, WpcTone } from './wpcConfig';
 
 const parseMetric = (raw: string): number => {
   const sanitized = raw.replace(',', '.').trim();
@@ -497,7 +497,7 @@ export default function AppWorkspace() {
         linear-gradient(155deg, rgba(16,56,22,0.58), rgba(56,110,42,0.36)),
         url('${toAssetUrl('textures/zacate-grass.svg')}')`
       : isWpc
-        ? `url(${toAssetUrl(WPC_TEXTURES[wpcTone])})`
+        ? `url(${toAssetUrl(getWpcTexture(wpcType, wpcTone))})`
         : `url(${polyTextures[polyColor]})`;
 
   return (
