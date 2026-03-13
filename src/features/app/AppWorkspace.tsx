@@ -312,7 +312,7 @@ export default function AppWorkspace() {
     setActivePage(page);
   };
 
-  const shortWhatsAppText = `${activeModule === 'pvc' ? 'Piso PVC' : activeModule === 'zacate' ? 'Zacate artificial' : activeModule === 'wpc' ? 'Tablilla WPC' : 'Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m`;
+  const shortWhatsAppText = `${activeModule === 'pvc' ? 'cotización de Piso PVC' : activeModule === 'zacate' ? 'cotización de Zacate artificial' : activeModule === 'wpc' ? 'cotización de Tablilla WPC' : 'Policarbonato'} · medidas ${width.toFixed(2)}m x ${height.toFixed(2)}m${activeModule === 'policarbonato' ? '' : ` · precio ${formatCurrency(editedTotal)}`}`;
 
 
   const visualizerWidth = Math.max(320, Math.min(1000, centerInnerWidth - 40));
@@ -661,7 +661,7 @@ export default function AppWorkspace() {
                 logoUrl={logoUrl}
                 initialQuote={billingDraft}
                 onSaveQuote={(quote) => {
-                  const quoteNumber = quote.quoteNumber ?? generateGlobalNumber('quote');
+                  const quoteNumber = generateGlobalNumber('quote');
                   saveStoredQuote({
                     number: quoteNumber,
                     kind: 'quote',
@@ -675,7 +675,6 @@ export default function AppWorkspace() {
                   });
                   pushToast('success', `Cotización ${quoteNumber} guardada.`);
                   setQuotesRefreshKey((prev) => prev + 1);
-                  return quoteNumber;
                 }}
                 availableDrafts={listStoredByKind('draft')}
               />
