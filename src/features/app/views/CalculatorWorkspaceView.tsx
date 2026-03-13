@@ -145,7 +145,7 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
           Parámetros del módulo
         </h2>
 
-        <div className="flex flex-wrap items-end gap-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <MetricInput label="Ancho (m)" value={widthInput} onChange={setWidthInput} parse={parseMetric} />
           <MetricInput label="Alto (m)" value={heightInput} onChange={setHeightInput} parse={parseMetric} />
 
@@ -205,15 +205,17 @@ export default function CalculatorWorkspaceView(props: CalculatorWorkspaceViewPr
                   ))}
                 </select>
               </div>
-              <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
-                <input type="checkbox" checked={wpcUseRecuts} onChange={(e) => setWpcUseRecuts(e.target.checked)} />
-                Optimizar con recortes
-              </label>
-              <span className="text-xs text-gray-500">Aprovecha sobrantes de corte de al menos 15 cm para reducir piezas estimadas.</span>
-              <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
-                <input type="checkbox" checked={wpcVerticalInstall} onChange={(e) => setWpcVerticalInstall(e.target.checked)} />
-                Instalar Horizontal!
-              </label>
+              <div className="md:col-span-2 lg:col-span-4 flex flex-col gap-2">
+                <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={wpcUseRecuts} onChange={(e) => setWpcUseRecuts(e.target.checked)} />
+                  Optimizar con recortes
+                </label>
+                <label className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={wpcVerticalInstall} onChange={(e) => setWpcVerticalInstall(e.target.checked)} />
+                  Vertical
+                </label>
+                <span className="text-xs text-gray-500">Aprovecha sobrantes de corte de al menos 15 cm para reducir piezas estimadas.</span>
+              </div>
             </>
           )}
 
