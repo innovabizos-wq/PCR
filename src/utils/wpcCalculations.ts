@@ -91,16 +91,6 @@ export function calculateWpcQuote(widthInput: number, heightInput: number, optio
       unitPrice: config.unitPrice,
       total,
       iva: 0
-    },
-    {
-      id: 'wpc-base',
-      name: 'Base matemática de piezas',
-      description: 'Sin ajustes técnicos de instalación',
-      formula: `ceil(${wallArea.toFixed(2)} / ${pieceCoverage.toFixed(3)})`,
-      quantity: basePieces,
-      unitPrice: 0,
-      total: 0,
-      iva: 0
     }
   ];
 
